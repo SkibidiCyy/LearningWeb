@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CodeLab | Professional HTML Learning Hub</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<meta name="description" content="CodeLab - Learn HTML through interactive lessons, quizzes, Tetris game, and gamified progression">
+<meta name="theme-color" content="#0d1b2d">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<!-- Manifest disabled for local CORS -->
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="icon-computer" viewBox="0 0 24 24">
+    <path d="M20 18c1.1 0 2-.9 2 2V6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v10c0 1.1 .9 2 2 2H0v2h24v-2h-4zM4 6h16v10H4V6z"></path>
+  </symbol>
+</svg>
+</head>
+<body class="dark app-loading">
+<div class="background"></div>
+<div class="app-loader" id="appLoader" aria-live="polite">
+  <div class="loader-panel">
+    <span class="loader-chip" id="loaderChip">Secure Sync</span>
+    <h1>Preparing your CodeLab workspace</h1>
+    <p id="appLoaderMessage">Connecting authentication, cloud progress, and your personalized dashboard.</p>
+    <div class="loader-bar"><span></span></div>
+  </div>
+</div>
+  
+  <!-- Fixed Auth Container - Step 2/5 TODO.md -->
+  <div class="auth-container" id="authContainer">
+    <div class="auth-shell">
+      <section class="auth-hero glass-panel">
+        <span class="auth-kicker">Cloud-Connected Learning</span>
+        <h1>Learn faster with secure progress that follows you everywhere.</h1>
+        <p>CodeLab now uses Firebase Authentication and Firestore so your profile, lessons, quizzes, and settings stay synced across sessions and devices.</p>
+        <div class="auth-feature-list">
+          <div class="auth-feature-card">
+            <strong>Protected access</strong>
+            <span>Email/password auth with password reset and verification support.</span>
+          </div>
+          <div class="auth-feature-card">
+            <strong>Realtime persistence</strong>
+            <span>Progress, profile details, and preferences move from local-only storage to cloud data.</span>
+          </div>
+          <div class="auth-feature-card">
+            <strong>Premium experience</strong>
+            <span>Smoother transitions, skeleton loading, and a mobile-first layout that feels polished on every screen.</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="auth-panel-wrap">
+    <!-- Login Tab -->
+    <div id="loginTabContent" class="tab-panel active">
+      <div class="login-card">
+        <div class="card-header">
+          <div class="logo-icon">👤</div>
+          <h2>Login</h2>
+          <p>Welcome back to your synced CodeLab workspace</p>
+        </div>
+        <div class="input-group">
+          <label>Email</label>
+          <input id="loginUsername" type="email" placeholder="Enter your email" autocomplete="email">
+        </div>
+        <div class="input-group">
+          <label>Password</label>
+          <input id="loginPassword" type="password" placeholder="Enter password" autocomplete="current-password">
+        </div>
+        <button class="btn-primary auth-action-btn" id="loginButton" onclick="login()">Login</button>
+        <p id="loginStatus" class="status-msg"></p>
+        <div class="auth-divider"><span>Or continue with phone</span></div>
+        <div class="phone-auth-card">
+          <div class="input-group">
+            <label>Phone Number</label>
+            <input id="loginPhoneNumber" type="tel" placeholder="09xxxxxxxxx" autocomplete="tel" inputmode="numeric" maxlength="11" pattern="09[0-9]{9}">
+          </div>
+          <div class="input-group">
+            <label>Verification Code</label>
+            <input id="loginPhoneCode" type="text" inputmode="numeric" maxlength="6" placeholder="Enter 6-digit code">
+          </div>
+          <div class="phone-auth-actions">
+            <button class="btn-secondary" type="button" onclick="sendPhoneAuthCode('login')">Send Code</button>
+            <button class="btn-primary" type="button" onclick="confirmPhoneAuthCode('login')">Verify & Login</button>
+          </div>
+          <div id="loginPhoneRecaptcha" class="phone-recaptcha"></div>
+          <p id="loginPhoneStatus" class="status-msg"></p>
+        </div>
+        <div class="actions">
+          <a href="#" onclick="forgotPassword()">Forgot Password?</a>
+        </div>
+        <p class="switch-text">No account yet? <a href="#" onclick="showAuthTab('signup'); return false;">Create one</a></p>
+      </div>
+    </div>
+    
+    <!-- Register Tab (Hidden by default) -->
+    <div id="signupTabContent" class="tab-panel">
+      <div class="login-card">
+        <div class="card-header">
+          <div class="logo-icon">✨</div>
+          <h2>Create Account</h2>
+          <p>Create a secure account with cloud-synced progress</p>
+        </div>
+        <div class="input-group">
+          <label>Email</label>
+          <input id="signupUsername" type="email" placeholder="Enter your email" autocomplete="email">
+        </div>
+        <div class="input-group">
+          <label>Display Name</label>
+          <input id="signupNickname" type="text" placeholder="Choose a display name" autocomplete="nickname">
+        </div>
+        <div class="input-group">
+          <label>Password</label>
+          <input id="signupPassword" type="password" placeholder="At least 6 chars" autocomplete="new-password">
+        </div>
+        <div class="input-group">
+          <label>Confirm Password</label>
+          <input id="signupConfirm" type="password" placeholder="Repeat password" autocomplete="new-password">
+        </div>
+        <button class="btn-primary auth-action-btn" id="signupButton" onclick="register()">Create Account</button>
+        <p id="signupStatus" class="status-msg"></p>
+        <div class="auth-divider"><span>Or sign up with phone</span></div>
+        <div class="phone-auth-card">
+          <div class="input-group">
+            <label>Phone Number</label>
+            <input id="signupPhoneNumber" type="tel" placeholder="09xxxxxxxxx" autocomplete="tel" inputmode="numeric" maxlength="11" pattern="09[0-9]{9}">
+          </div>
+          <div class="input-group">
+            <label>Verification Code</label>
+            <input id="signupPhoneCode" type="text" inputmode="numeric" maxlength="6" placeholder="Enter 6-digit code">
+          </div>
+          <div class="phone-auth-actions">
+            <button class="btn-secondary" type="button" onclick="sendPhoneAuthCode('signup')">Send Code</button>
+            <button class="btn-primary" type="button" onclick="confirmPhoneAuthCode('signup')">Verify & Create</button>
+          </div>
+          <div id="signupPhoneRecaptcha" class="phone-recaptcha"></div>
+          <p id="signupPhoneStatus" class="status-msg"></p>
+        </div>
+        <p class="switch-text">Already have an account? <a href="#" onclick="showAuthTab('login'); return false;">Back to login</a></p>
+      </div>
+    </div>
+      </section>
+    </div>
+  </div>
+  
+<!-- Popup Notifications -->
+<div class="popup-container" id="popupContainer"></div>
+<div class="success-overlay" id="successOverlay" aria-hidden="true">
+  <div class="success-ring">
+    <div class="success-check">✓</div>
+  </div>
+  <p id="successOverlayText">Success</p>
+</div>
+
+<!-- Complete Forgot Password Modal -->
+<div class="modal forgot-password-modal" id="forgotPasswordModal" style="display:none;">
+  <div class="modal-content glass-panel forgot-panel">
+    <div class="forgot-orb" aria-hidden="true"></div>
+    <div class="forgot-header">
+      <div class="forgot-badge-row">
+        <span class="auth-kicker">Account Recovery</span>
+        <span class="forgot-security-pill">Secure Reset</span>
+      </div>
+      <div class="logo-icon forgot-logo">🔒</div>
+      <h2>Reset your password</h2>
+      <p>Enter the email linked to your CodeLab account and we’ll send a secure reset link so you can get back in quickly.</p>
+    </div>
+    <div id="forgotStep1">
+      <div class="input-group">
+        <label>Account Email</label>
+        <input id="forgotEmailLRN" type="email" placeholder="Enter your account email" autocomplete="email">
+      </div>
+      <div class="forgot-actions">
+        <button class="btn-primary" id="resetPasswordButton" onclick="sendResetCode()">Send Reset Link</button>
+        <button class="btn-secondary forgot-close-inline" onclick="closeForgotPasswordModal()">Cancel</button>
+      </div>
+      <div class="forgot-note-list">
+        <div class="forgot-note-card">
+          <strong>Email delivery</strong>
+          <span>Check your inbox and spam folder for the reset link.</span>
+        </div>
+        <div class="forgot-note-card">
+          <strong>One account email</strong>
+          <span>Use the same email you signed up with in CodeLab.</span>
+        </div>
+      </div>
+      <p id="forgotStatus" class="forgot-status"></p>
+    </div>
+    <button class="btn-secondary forgot-close-footer" onclick="closeForgotPasswordModal()">Close</button>
+  </div>
+</div>
+
+<!-- Main Interface -->
+  <!-- STEP 2/5 COMPLETE: Auth forms added -->
+  <div id="mainInterface" style="display:none; height:100vh; overflow:hidden;">
+  <!-- Sidebar -->
+  <div class="sidebar glass-panel">
+    <div class="sidebar-header">
+      <div class="logo-area">
+        <div class="logo-icon-small">📱</div>
+        <h2>CodeLab</h2>
+      </div>
+    </div>
+    
+    <!-- User Section -->
+    <div class="sidebar-user">
+      <div class="user-avatar" id="sidebarAvatar" role="img" aria-label="Profile picture"></div>
+      <div class="user-info">
+        <h4 id="sidebarUsername">Demo User</h4>
+        <div class="user-level">
+          <span>⭐</span>
+          <span>Level <span id="sidebarLevel">1</span></span>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Navigation -->
+    <nav class="nav-links">
+      <button type="button" data-page="dashboard" onclick="showPage('dashboard')" class="nav-btn active">
+        <span>📊</span> Dashboard
+      </button>
+
+      <button type="button" data-page="lessons" onclick="showPage('lessons')" class="nav-btn">
+        <span>📚</span> Lessons
+      </button>
+
+      <button type="button" data-page="quizzes" onclick="showPage('quizzes')" class="nav-btn">
+        <span>🧠</span> Quizzes
+      </button>
+
+      <button type="button" data-page="achievements" onclick="showPage('achievements')" class="nav-btn">
+        <span>🏆</span> Achievements
+      </button>
+      <button type="button" data-page="games" onclick="showPage('games')" class="nav-btn">
+        <span>🎮</span> Games
+      </button>
+    </nav>
+    
+    <!-- Footer -->
+    <div class="sidebar-footer">
+      <button type="button" onclick="toggleSettings()" class="nav-btn">
+        <span>⚙️</span> Settings
+      </button>
+      <button type="button" onclick="logout()" class="nav-btn logout-btn">
+        <span>🚪</span> Logout
+      </button>
+    </div>
+  </div>
+
+  <!-- Settings Overlay -->
+  <div class="settings-overlay" id="settingsOverlay" onclick="toggleSettings()" aria-hidden="true"></div>
+
+  <!-- Settings Panel -->
+  <div class="settings-card" id="settings" aria-hidden="true">
+    <div class="settings-header">
+      <div>
+        <h3>⚙️ Settings</h3>
+        <p>Manage your account, privacy, and learning preferences.</p>
+      </div>
+      <button class="settings-close" onclick="toggleSettings()" aria-label="Close settings">✕</button>
+    </div>
+
+    <div class="settings-section">
+      <h4>Profile</h4>
+      <div class="avatar-settings">
+        <div class="avatar-preview-panel">
+          <div class="user-avatar avatar-preview" id="settingsAvatarPreview" role="img" aria-label="Selected profile picture"></div>
+          <p>Choose a built-in avatar or upload your own photo.</p>
+        </div>
+        <div class="avatar-picker">
+          <button type="button" class="avatar-option active" data-avatar-choice="wave" onclick="selectAvatarPreset('wave')" aria-label="Select blue avatar"></button>
+          <button type="button" class="avatar-option" data-avatar-choice="sunset" onclick="selectAvatarPreset('sunset')" aria-label="Select warm avatar"></button>
+          <button type="button" class="avatar-option" data-avatar-choice="forest" onclick="selectAvatarPreset('forest')" aria-label="Select green avatar"></button>
+        </div>
+        <div class="avatar-upload-row">
+          <label class="btn-secondary avatar-upload-btn" for="avatarUpload">Upload Picture</label>
+          <input id="avatarUpload" type="file" accept="image/*" onchange="handleAvatarUpload(event)">
+          <button type="button" class="btn-secondary" onclick="clearCustomAvatar()">Remove Custom Photo</button>
+        </div>
+      </div>
+      <div class="form-grid settings-form-grid">
+        <div class="input-group has-label">
+          <label>Nickname</label>
+          <input id="nickname" value="Demo User">
+        </div>
+        <div class="input-group has-label">
+          <label>Account Email</label>
+          <input id="email" value="" readonly>
+        </div>
+        <div class="input-group has-label">
+          <label>Phone</label>
+          <input id="phone" value="" placeholder="09xxxxxxxxx" inputmode="numeric" maxlength="11" pattern="09[0-9]{9}">
+        </div>
+        <div class="input-group has-label full-width">
+          <label>Bio</label>
+          <textarea id="bio">Learning HTML!</textarea>
+        </div>
+      </div>
+
+      <div class="verification-grid">
+        <div class="verify-card">
+          <div class="verify-head">
+            <strong>Email Verification</strong>
+            <span id="emailVerifyBadge" class="verify-badge">Unverified</span>
+          </div>
+          <div class="verify-actions" id="emailVerifyActions">
+            <button class="btn-secondary" type="button" onclick="sendEmailVerificationCode()">Send Verification Email</button>
+          </div>
+          <p id="emailVerifyHelp" class="verify-help"></p>
+        </div>
+
+        <div class="verify-card">
+          <div class="verify-head">
+            <strong>Phone Verification</strong>
+            <span id="phoneVerifyBadge" class="verify-badge">Unverified</span>
+          </div>
+          <div class="verify-actions">
+            <button class="btn-secondary" type="button" onclick="sendPhoneVerificationCode()">Send Code</button>
+            <input id="phoneVerifyCode" type="text" inputmode="numeric" maxlength="6" placeholder="6-digit code">
+            <button class="btn-primary" type="button" onclick="verifyPhoneCode()">Verify</button>
+          </div>
+          <p id="phoneVerifyHelp" class="verify-help"></p>
+        </div>
+      </div>
+
+      <div class="profile-actions settings-actions">
+        <button class="btn-primary" onclick="saveProfile()">Save Profile</button>
+        <p id="profileStatus"></p>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h4>Appearance</h4>
+      <div class="setting-item">
+        <div>
+          <strong>Dark Mode</strong>
+          <p>Switch between light and dark workspace styles.</p>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="darkModeToggle" checked onchange="toggleDark()">
+          <span class="slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h4>Security</h4>
+      <div class="setting-item">
+        <div>
+          <strong>Session Lock</strong>
+          <p>Require re-entry to continue after inactivity.</p>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="sessionLockToggle" onchange="toggleSetting('sessionLock')">
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div class="setting-item">
+        <div>
+          <strong>Login Alerts</strong>
+          <p>Show alerts when the account is accessed on this device.</p>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="loginAlertsToggle" onchange="toggleSetting('loginAlerts')">
+          <span class="slider"></span>
+        </label>
+      </div>
+      <button class="btn-secondary settings-full-btn" onclick="forgotPassword()">Reset Password</button>
+    </div>
+
+    <div class="settings-section">
+      <h4>Learning</h4>
+      <div class="setting-item">
+        <div>
+          <strong>Hints</strong>
+          <p>Keep lesson hints available while practicing.</p>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="lessonHintsToggle" onchange="toggleSetting('lessonHints')">
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div class="setting-item">
+        <div>
+          <strong>Sound Effects</strong>
+          <p>Enable simple feedback sounds for games and achievements.</p>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="soundEffectsToggle" onchange="toggleSetting('soundEffects')">
+          <span class="slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h4>Account</h4>
+      <div class="form-grid settings-form-grid">
+        <div class="input-group has-label">
+          <label>Current Password</label>
+          <input id="currentPassword" type="password" placeholder="Enter current password">
+        </div>
+        <div class="input-group has-label">
+          <label>New Password</label>
+          <input id="newPassword" type="password" placeholder="At least 6 characters">
+        </div>
+        <div class="input-group has-label full-width">
+          <label>Confirm New Password</label>
+          <input id="confirmNewPassword" type="password" placeholder="Repeat new password">
+        </div>
+      </div>
+      <div class="profile-actions settings-actions">
+        <button class="btn-primary" type="button" onclick="changePassword()">Change Password</button>
+        <button class="btn-secondary" type="button" onclick="exportAccountData()">Export Data</button>
+        <button class="btn-danger" type="button" onclick="clearLocalData()">Clear Local Data</button>
+        <p id="accountStatus" class="status-msg"></p>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h4>Support</h4>
+      <div class="support-grid">
+        <div class="support-card">
+          <div class="support-head">
+            <strong>Contact CodeLab</strong>
+            <span class="badge">Help</span>
+          </div>
+          <div class="support-items">
+            <a class="support-item" href="mailto:CodeLab@gmail.com">
+              <span class="support-icon">✉</span>
+              <span>
+                <span class="support-label">Email</span>
+                <span class="support-value">CodeLab@gmail.com</span>
+              </span>
+            </a>
+            <a class="support-item" href="tel:+639243243243">
+              <span class="support-icon">☎</span>
+              <span>
+                <span class="support-label">Phone (PH)</span>
+                <span class="support-value">+63 924 324 3243</span>
+              </span>
+            </a>
+          </div>
+          <div class="support-actions">
+            <a class="btn-secondary support-btn" href="mailto:CodeLab@gmail.com?subject=CodeLab%20Support%20Request&body=Hi%20CodeLab%2C%0A%0A%28Describe%20your%20issue%20here%29%0A%0AUsername%3A%20">
+              Report a Bug
+            </a>
+            <a class="btn-secondary support-btn" href="mailto:CodeLab@gmail.com?subject=Feature%20Request%20for%20CodeLab&body=Hi%20CodeLab%2C%0A%0AI%20want%20to%20suggest%3A%20">
+              Suggest a Feature
+            </a>
+          </div>
+        </div>
+
+        <div class="support-card">
+          <div class="support-head">
+            <strong>Tips</strong>
+            <span class="badge">Quick</span>
+          </div>
+          <ul class="support-list">
+            <li>Verify your email/phone to secure your profile.</li>
+            <li>Use Export Data before clearing local data.</li>
+            <li>Turn on Sound Effects for game feedback.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-footer">
+      <button class="btn-danger settings-full-btn" onclick="logout()">Logout</button>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="main">
+    <!-- Dashboard -->
+    <div class="card page active" id="dashboard">
+      <div class="page-header">
+        <h3>Dashboard</h3>
+        <span class="badge">Student</span>
+      </div>
+      <div class="dashboard-hero" aria-label="Your learning dashboard overview">
+        <div class="dashboard-hero-left">
+          <div class="hero-kicker" aria-hidden="true">🚀 Keep the streak alive</div>
+          <h2 class="hero-title" id="welcomeBack">Welcome back, Demo User</h2>
+          <p class="hero-subtitle" id="progressBlurb">Every win lights up your dashboard. Next up: a quick puzzle or typing boost.</p>
+
+
+          <div class="hero-progress-row">
+            <div class="hero-progress-ring" aria-hidden="true">
+              <svg viewBox="0 0 120 120" class="ring-svg">
+                <circle class="ring-bg" cx="60" cy="60" r="46"></circle>
+                <circle class="ring-fg" cx="60" cy="60" r="46" id="heroProgressRing"></circle>
+              </svg>
+              <div class="ring-text">
+                <div class="ring-percent" id="progressPercent">0%</div>
+                <div class="ring-label">Completed</div>
+              </div>
+            </div>
+
+            <div class="hero-progress-meta">
+              <div class="meta-row">
+                <span class="meta-icon" aria-hidden="true">🔥</span>
+                <div>
+                  <div class="meta-label">Current streak</div>
+                  <div class="meta-value" id="streakDays">1 day</div>
+                </div>
+              </div>
+              <div class="meta-row">
+                <span class="meta-icon" aria-hidden="true">⚡</span>
+                <div>
+                  <div class="meta-label">XP & Level</div>
+                  <div class="meta-value" id="xpLevelDisplay">150 XP • Level 1</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="hero-cta-row">
+            <button class="btn-primary dashboard-cta" type="button" id="continueLearningBtn" onclick="continueLearning()">
+              ▶ Continue Learning
+            </button>
+            <div class="hero-cta-note">Next up: practice a lesson topic or jump into a quick puzzle.</div>
+          </div>
+
+          <div class="hero-vibe-divider" aria-hidden="true"></div>
+
+        </div>
+
+        <div class="dashboard-hero-right">
+          <div class="hero-card">
+            <div class="hero-card-title">Progress snapshot</div>
+            <div class="hero-card-grid">
+              <div class="hero-card-stat">
+                <div class="small-label">Level</div>
+                <div class="big-value" id="heroLevel">1</div>
+              </div>
+              <div class="hero-card-stat">
+                <div class="small-label">XP</div>
+                <div class="big-value" id="heroXP">150</div>
+              </div>
+              <div class="hero-card-stat full">
+                <div class="small-label">XP to next level</div>
+                <div class="big-value" id="heroXpToNext">50 XP</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="hero-mini-banner">
+            <span class="banner-dot" aria-hidden="true"></span>
+            <span id="heroMotivation">Every session counts. One more practice = faster leveling.</span>
+          </div>
+        </div>
+      </div>
+
+
+      <div class="progress-container">
+        <div class="progress-label">
+          <span>Progress to Level <span id="nextLevelDisplay">2</span></span>
+          <span id="xpProgressLabel">150/200 XP</span>
+        </div>
+        <div class="progress">
+          <div class="bar" id="progress"></div>
+        </div>
+      </div>
+
+      <script>
+        // Placeholder: overwritten by script.js once app initializes.
+        // This avoids broken onclick references during early load.
+function continueLearning() {
+          // Match the app’s UX: keep learner momentum on the most relevant next step.
+          // If lessons page exists, go there; otherwise fall back to dashboard.
+          if (typeof window.showPage === 'function') {
+            try {
+              window.showPage('lessons');
+              return;
+            } catch (e) {
+              // ignore and fallback
+            }
+            window.showPage('dashboard');
+          }
+        }
+      </script>
+
+
+      <!-- Analytics Section -->
+      <div class="analytics-panel">
+        <div class="analytics-header">
+          <div>
+            <h4>Live Analytics</h4>
+            <p>Real-time learning activity and performance insights.</p>
+          </div>
+          <span class="badge">Live</span>
+        </div>
+        <div class="analytics-grid">
+          <div class="analytics-card">
+            <span class="analytics-label">Completion Rate</span>
+            <strong id="analyticsCompletionRate">0%</strong>
+            <p>Lessons completed out of available topics.</p>
+          </div>
+          <div class="analytics-card">
+            <span class="analytics-label">XP To Next Level</span>
+            <strong id="analyticsXpToNext">0 XP</strong>
+            <p>How much progress remains before leveling up.</p>
+          </div>
+          <div class="analytics-card">
+            <span class="analytics-label">Typing Peak</span>
+            <strong id="analyticsTypingPeak">0 WPM</strong>
+            <p>Your best recorded typing speed so far.</p>
+          </div>
+          <div class="analytics-card">
+            <span class="analytics-label">Puzzle Progress</span>
+            <strong id="analyticsPuzzleProgress">0/0</strong>
+            <p>Completed HTML puzzles across all available levels.</p>
+          </div>
+        </div>
+      <div class="analytics-strip">
+          <div class="analytics-mini">
+            <span class="analytics-mini-label">Study Streak</span>
+            <strong id="analyticsStudyStreak">1 day</strong>
+          </div>
+          <div class="analytics-mini">
+            <span class="analytics-mini-label">Activity Score</span>
+            <strong id="analyticsActivityScore">0</strong>
+          </div>
+          <div class="analytics-mini">
+            <span class="analytics-mini-label">Account Status</span>
+            <strong id="analyticsAccountStatus">Standard</strong>
+          </div>
+        </div>
+        <div class="analytics-charts">
+          <div class="chart-card">
+            <div class="chart-card-header">
+              <div>
+                <h5>XP Momentum</h5>
+                <p>Recent learning pace across your weekly activity.</p>
+              </div>
+              <span id="analyticsChartDelta" class="badge">+0%</span>
+            </div>
+            <svg class="line-chart" viewBox="0 0 320 160" preserveAspectRatio="none" aria-hidden="true">
+              <polyline id="analyticsLineGlow" class="line-glow" points="0,140 50,120 100,110 150,90 200,80 250,65 320,40"></polyline>
+              <polyline id="analyticsLinePath" class="line-path" points="0,140 50,120 100,110 150,90 200,80 250,65 320,40"></polyline>
+            </svg>
+            <div id="analyticsLineDots" class="line-dots"></div>
+            <div class="chart-axis-labels">
+              <span>Mon</span>
+              <span>Tue</span>
+              <span>Wed</span>
+              <span>Thu</span>
+              <span>Fri</span>
+              <span>Sat</span>
+              <span>Sun</span>
+            </div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-card-header">
+              <div>
+                <h5>Performance Mix</h5>
+                <p>Current strength across lessons, puzzles, typing, and quizzes.</p>
+              </div>
+            </div>
+            <div class="bar-chart">
+              <div class="bar-row">
+                <span>Lessons</span>
+                <div class="bar-track"><div id="analyticsBarLessons" class="bar-fill"></div></div>
+                <strong id="analyticsBarLessonsValue">0%</strong>
+              </div>
+              <div class="bar-row">
+                <span>Puzzles</span>
+                <div class="bar-track"><div id="analyticsBarPuzzles" class="bar-fill"></div></div>
+                <strong id="analyticsBarPuzzlesValue">0%</strong>
+              </div>
+              <div class="bar-row">
+                <span>Typing</span>
+                <div class="bar-track"><div id="analyticsBarTyping" class="bar-fill"></div></div>
+                <strong id="analyticsBarTypingValue">0%</strong>
+              </div>
+              <div class="bar-row">
+                <span>Quizzes</span>
+                <div class="bar-track"><div id="analyticsBarQuizzes" class="bar-fill"></div></div>
+                <strong id="analyticsBarQuizzesValue">0%</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+
+
+
+
+    <!-- Lessons -->
+    <div class="card page" id="lessons">
+      <div class="page-header">
+        <h3>Lessons</h3>
+        <span class="badge">Structured Learning</span>
+      </div>
+
+      <div class="lessons-tabs">
+        <button type="button" class="editor-tab active" data-lesson-tab="html" onclick="switchLessonTab('html')">HTML</button>
+        <button type="button" class="editor-tab" data-lesson-tab="js" onclick="switchLessonTab('js')">JavaScript</button>
+      </div>
+
+      <div id="topicGrid" class="topic-grid"></div>
+      <div id="topicGridJS" class="topic-grid" style="display:none;"></div>
+
+      <div id="lessonDetail" class="lesson-detail-view" style="display:none;">
+        <div class="lesson-detail-header">
+          <button type="button" class="btn-secondary" onclick="goBackToLessons()">← Back to Lessons</button>
+          <div>
+            <h3 id="lessonDetailTitle"></h3>
+            <span class="badge" id="lessonDetailBadge"></span>
+          </div>
+        </div>
+        <p id="lessonDetailIntro"></p>
+        <div id="lessonTopicsGrid" class="topic-grid"></div>
+      </div>
+
+      <div id="lessonContent" class="lesson-content-view" style="display:none;">
+        <div class="lesson-detail-header">
+          <button type="button" class="btn-secondary" onclick="goBackToTopics()">← Back</button>
+          <div>
+            <h3 id="lessonTitle"></h3>
+            <span class="badge" id="lessonBadge"></span>
+          </div>
+        </div>
+        <p id="lessonDescription"></p>
+
+        <div class="lesson-body">
+          <div class="lesson-steps-panel">
+            <div class="activity-header"><span>Steps</span></div>
+            <ol id="lessonSteps"></ol>
+          </div>
+
+          <div class="lesson-code-panel">
+            <div class="activity-header"><span>Code Example</span></div>
+            <div id="lessonCode"></div>
+          </div>
+
+          <div class="lesson-activity-panel">
+            <div class="activity-header">
+              <span>Activity</span>
+              <span id="activityPrompt"></span>
+            </div>
+            <div class="activity-editor-inner">
+              <textarea id="activityCode" spellcheck="false"></textarea>
+              <div class="activity-actions">
+                <button type="button" class="btn-secondary" onclick="runActivity()">▶ Run</button>
+                <button type="button" class="btn-primary" id="checkActivityBtn" onclick="checkActivity()">Check Answer</button>
+                <button type="button" class="btn-primary" id="completeLessonBtn" style="display:none;" onclick="completeLesson()">✓ Complete Lesson</button>
+              </div>
+              <div id="activityResult" class="activity-result"></div>
+              <div id="activityHint" class="activity-hint" style="display:none;"></div>
+            </div>
+            <iframe id="activityOutput" title="Activity Preview"></iframe>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quizzes -->
+    <div class="card page" id="quizzes">
+      <div class="page-header">
+        <h3>Quizzes</h3>
+        <span class="badge" id="quizzesCountBadge">0/0 Unlocked</span>
+      </div>
+
+      <div id="quizGrid" class="topic-grid"></div>
+
+      <div id="quizContent" class="quiz-content-view" style="display:none;">
+        <div class="lesson-detail-header">
+          <button type="button" class="btn-secondary" onclick="goBackToQuizzes()">← Back to Quizzes</button>
+          <div>
+            <h3 id="quizTitle"></h3>
+            <span class="badge" id="quizBadge"></span>
+          </div>
+        </div>
+        <p id="quizIntro"></p>
+
+        <div id="quizQuestions" class="quiz-questions"></div>
+
+        <div class="quiz-actions">
+          <button type="button" class="btn-primary" onclick="submitQuiz()">Submit Quiz</button>
+        </div>
+        <div id="quizResult" class="activity-result"></div>
+      </div>
+    </div>
+
+    <!-- Achievements -->
+    <div class="card page" id="achievements">
+      <div class="page-header">
+        <h3>Achievements</h3>
+        <span id="achievementsCount" class="badge">0/100</span>
+      </div>
+      <div class="achievements-grid"></div>
+    </div>
+
+    <!-- GAMES PAGE - NEW -->
+    <div class="card page" id="games">
+      <div class="page-header">
+        <h3>🎮 Games Hub</h3>
+        <span class="badge">Earn XP • Level Up</span>
+      </div>
+      
+      <!-- Games Tabs -->
+      <div class="games-tabs">
+        <button class="editor-tab active" onclick="showGamesMode('rush')">🏷️ Tag Rush</button>
+        <button class="editor-tab" onclick="showGamesMode('typing')">⌨️ Typing</button>
+        <button class="editor-tab" onclick="showGamesMode('puzzle')">🧩 Puzzles</button>
+      </div>
+
+      <!-- Tag Rush Game -->
+      <div id="gamesRush" class="game-section active">
+        <div class="game-header">
+          <h4>🏷️ Tag Rush</h4>
+          <div class="game-stats">
+            <span>Score: <span id="rushScore">0</span></span>
+            <span>Streak: <span id="rushStreak">0</span></span>
+            <span>Level: <span id="rushLevel">1</span></span>
+            <span>Time: <span id="rushTime">45s</span></span>
+          </div>
+        </div>
+        <div class="typing-options">
+          <label for="rushDurationSelect">Round Length</label>
+          <select id="rushDurationSelect" onchange="setRushDuration(this.value)">
+            <option value="30">30 seconds</option>
+            <option value="45" selected>45 seconds</option>
+            <option value="60">1 minute</option>
+            <option value="120">2 minutes</option>
+          </select>
+        </div>
+        <div class="rush-board">
+          <div class="rush-card">
+            <span class="rush-label">Choose the best HTML tag</span>
+            <h5 id="rushPromptTitle">Press start to begin</h5>
+            <p id="rushPromptText">You will get quick prompts about page structure, semantics, and media elements.</p>
+          </div>
+          <div class="rush-options" id="rushOptions"></div>
+        </div>
+        <div id="rushResult" class="activity-result" style="display:none;"></div>
+        <div class="typing-actions">
+          <button class="btn-primary" id="rushStartBtn" onclick="startRushGame()">▶ Start Round (45s)</button>
+          <button class="btn-secondary" id="rushPauseBtn" onclick="pauseRushGame()" style="display:none;">⏸️ Pause</button>
+          <button class="btn-secondary" onclick="skipRushQuestion()">⏭ Skip</button>
+        </div>
+        <div class="game-controls">
+          <p>Answer quickly to build streaks, increase score, and sharpen your HTML tag instincts.</p>
+        </div>
+      </div>
+
+      <!-- Typing Game -->
+      <div id="gamesTyping" class="game-section">
+        <div class="game-header">
+          <h4>⌨️ Typing Speed Test</h4>
+          <div class="typing-stats">
+            <span>WPM: <span id="typingWPM">0</span></span>
+            <span>Accuracy: <span id="typingAccuracy">0</span>%</span>
+            <span>Level: <span id="typingLevel">1</span></span>
+          </div>
+        </div>
+        <div class="typing-meta">
+          <span>Time Left: <strong id="typingTimeLeft">60s</strong></span>
+          <span>Characters: <strong id="typingChars">0</strong></span>
+          <span>Words Completed: <strong id="typingWordsDone">0</strong></span>
+        </div>
+        <div class="typing-options">
+          <label for="typingDurationSelect">Duration</label>
+          <select id="typingDurationSelect" onchange="setTypingDuration(this.value)">
+            <option value="15">15 seconds</option>
+            <option value="30">30 seconds</option>
+            <option value="60" selected>1 minute</option>
+            <option value="120">2 minutes</option>
+            <option value="300">5 minutes</option>
+          </select>
+        </div>
+        <div id="typingDisplay" class="typing-display">Click "Start Test" to begin →</div>
+        <div class="typing-progress">
+          <div id="typingProgressBar"></div>
+        </div>
+        <input type="text" id="typingInput" placeholder="Type the CSS words above..." disabled>
+        <div class="typing-actions">
+          <button class="btn-primary" id="typingStartBtn" onclick="startTypingTest()">▶ Start Test (60s)</button>
+          <button class="btn-secondary" id="typingPauseBtn" onclick="pauseTypingTest()" style="display:none;">⏸️ Pause</button>
+        </div>
+        <div id="typingResult" class="activity-result" style="display:none;"></div>
+        <div id="typingResultsGrid" class="typing-results-grid" style="display:none;">
+          <div class="typing-result-card">
+            <span>Net WPM</span>
+            <strong id="typingResultWpm">0</strong>
+          </div>
+          <div class="typing-result-card">
+            <span>WPS</span>
+            <strong id="typingResultWps">0.0</strong>
+          </div>
+          <div class="typing-result-card">
+            <span>Accuracy</span>
+            <strong id="typingResultAccuracy">0%</strong>
+          </div>
+          <div class="typing-result-card">
+            <span>Correct Chars</span>
+            <strong id="typingResultCorrectChars">0</strong>
+          </div>
+          <div class="typing-result-card">
+            <span>Total Chars</span>
+            <strong id="typingResultTotalChars">0</strong>
+          </div>
+          <div class="typing-result-card">
+            <span>Time Used</span>
+            <strong id="typingResultTimeUsed">0s</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- Puzzle Game -->
+      <div id="gamesPuzzle" class="game-section">
+        <div class="game-header">
+          <h4>🧠 Semantic Match</h4>
+          <span>Level <span id="puzzleLevelNum">1</span>/<span id="puzzleLevelTotal">1</span> • <span id="puzzleXp">+10 XP</span></span>
+        </div>
+
+        <div class="puzzle-nav-row">
+          <div id="puzzleLevelButtons"></div>
+        </div>
+
+        <div class="puzzle-layout">
+          <div class="puzzle-info-panel">
+            <h5 id="puzzleTitle">Semantic Match</h5>
+            <p id="puzzleDifficulty" class="puzzle-difficulty">Beginner</p>
+            <p id="puzzleDescription">Flip cards and match each HTML tag with the right meaning.</p>
+            <span id="puzzleCompletedBadge" class="badge" style="display:none;">✅ Completed</span>
+            <div class="typing-meta puzzle-meta">
+              <span>Moves: <strong id="puzzleMoves">0</strong></span>
+              <span>Matches: <strong id="puzzleMatches">0</strong></span>
+              <span>Time: <strong id="puzzleTimer">0s</strong></span>
+            </div>
+            <button onclick="togglePuzzleHint()" class="btn-secondary" style="margin-top:12px;">💡 Show Hint</button>
+            <div id="puzzleHint" class="activity-hint" style="display:none;"></div>
+          </div>
+
+          <div class="puzzle-play-panel">
+            <div class="puzzle-toolbar">
+              <strong>Match every tag to its purpose</strong>
+              <button onclick="resetPuzzleLevel()" class="btn-secondary">🔄 Reset Board</button>
+            </div>
+            <div id="puzzleBoard" class="puzzle-board"></div>
+            <div id="puzzleResult" class="activity-result"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="firebase-config.js"></script>
+<script type="module" src="firebase-init.js"></script>
+
+<script src="script.js"></script>
+<!-- achievements-fixed.js removed - merged into script.js -->
+<!-- challenges.js merged into script.js -->
+
+
+</body>
+</html>
