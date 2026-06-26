@@ -83,13 +83,15 @@
     setDrawerOpen(false);
   }
 
-  function syncDrawerForLayout() {
-    if (!isMobileLayout()) {
-      setDrawerOpen(false);
-      return;
-    }
+  function setupDesktopEdgeHover() {
+  }
 
+  function syncDrawerForLayout() {
     ensureMobileDrawerUI();
+    if (isMobileLayout()) {
+    } else {
+      setDrawerOpen(false);
+    }
   }
 
   function setUiMode(mode) {
@@ -215,13 +217,15 @@
 
     completedLessons: [],
     completedQuizzes: [],
-    completedPuzzles: [],
-    darkMode: true,
-    typingBestWpm: 0,
+    darkMode: window.matchMedia("(prefers-color-scheme: dark)").matches,
+    sprintHighScore: 0,
+    typingHighScore: 0,
+    studyStreak: 0,
+    lastActiveDate: "",
+    xpHistory: [],
     sessionLock: false,
     loginAlerts: true,
-    lessonHints: true,
-    soundEffects: false
+    lessonHints: true
   };
   const appState = { ...defaultAppState };
   const firebaseState = {
@@ -249,266 +253,19 @@
   };
 
   // Apply as early as possible to reduce layout "jump" on load.
-  applyAutoLayout();
-  setUiMode("auth");
-  syncDrawerForLayout();
-  setupDrawerGestures();
+  function bootstrapEarlyLayout() {
+    if (!document.body) {
+      requestAnimationFrame(bootstrapEarlyLayout);
+      return;
+    }
+    applyAutoLayout();
+    setUiMode("auth");
+    syncDrawerForLayout();
+    setupDrawerGestures();
+  }
+  bootstrapEarlyLayout();
   window.addEventListener("resize", scheduleAutoLayout, { passive: true });
   window.addEventListener("orientationchange", scheduleAutoLayout, { passive: true });
-
-  const basePuzzleData = [
-    {
-      title: "Starter Semantics",
-      difficulty: "Beginner",
-      description: "Match the most common HTML tags to what they do on a page.",
-      hint: "Pair each element name with the job it does in a basic layout.",
-      xp: 10,
-      pairs: [
-        { label: "<h1>", match: "Main page heading" },
-        { label: "<p>", match: "Paragraph text" },
-        { label: "<img>", match: "Displays an image" },
-        { label: "<a>", match: "Creates a link" }
-      ]
-    },
-    {
-      title: "Page Structure",
-      difficulty: "Beginner",
-      description: "Learn the semantic tags that shape the main parts of a website.",
-      hint: "Think about where navigation, main content, and side notes belong.",
-      xp: 12,
-      pairs: [
-        { label: "<nav>", match: "Navigation menu area" },
-        { label: "<main>", match: "Primary page content" },
-        { label: "<footer>", match: "Bottom section of a page" },
-        { label: "<aside>", match: "Secondary side content" }
-      ]
-    },
-    {
-      title: "Media and Tables",
-      difficulty: "Intermediate",
-      description: "Connect media and table tags with their specific jobs.",
-      hint: "Some tags hold media players, while others build table structure.",
-      xp: 14,
-      pairs: [
-        { label: "<audio>", match: "Embeds sound playback" },
-        { label: "<video>", match: "Embeds video playback" },
-        { label: "<th>", match: "Table header cell" },
-        { label: "<td>", match: "Table data cell" }
-      ]
-    },
-    {
-      title: "Form Builder",
-      difficulty: "Intermediate",
-      description: "Match the form tags that make input experiences accessible and useful.",
-      hint: "Labels explain inputs, forms wrap the whole submission area.",
-      xp: 16,
-      pairs: [
-        { label: "<form>", match: "Wraps user input fields" },
-        { label: "<label>", match: "Names an input for users" },
-        { label: "<button>", match: "Triggers an action" },
-        { label: "<input>", match: "Collects user data" }
-      ]
-    },
-    {
-      title: "Document Basics",
-      difficulty: "Intermediate",
-      description: "Match core document tags that define the structure of an HTML file.",
-      hint: "Think: page language, head metadata, and visible body content.",
-      xp: 18,
-      pairs: [
-        { label: "<!DOCTYPE html>", match: "Declares HTML5 document type" },
-        { label: "<html>", match: "Root element of the page" },
-        { label: "<head>", match: "Metadata and links to resources" },
-        { label: "<body>", match: "Visible content of the page" }
-      ]
-    },
-    {
-      title: "Text and Emphasis",
-      difficulty: "Intermediate",
-      description: "Match text tags that affect meaning and readability.",
-      hint: "Some tags stress meaning, others represent strong importance.",
-      xp: 20,
-      pairs: [
-        { label: "<h2>", match: "Section heading" },
-        { label: "<strong>", match: "Strong importance" },
-        { label: "<em>", match: "Emphasis / stress" },
-        { label: "<small>", match: "Fine print / side notes" }
-      ]
-    },
-    {
-      title: "Lists and Items",
-      difficulty: "Advanced",
-      description: "Match list tags to their roles in structured content.",
-      hint: "Ordered lists are numbered, unordered lists are bulleted.",
-      xp: 22,
-      pairs: [
-        { label: "<ul>", match: "Unordered list" },
-        { label: "<ol>", match: "Ordered list" },
-        { label: "<li>", match: "List item" },
-        { label: "<dl>", match: "Description list" }
-      ]
-    },
-    {
-      title: "Tables Deep Dive",
-      difficulty: "Advanced",
-      description: "Match table container tags and their responsibilities.",
-      hint: "Some tags group rows, others define the table caption.",
-      xp: 24,
-      pairs: [
-        { label: "<table>", match: "Table container" },
-        { label: "<tr>", match: "Table row" },
-        { label: "<thead>", match: "Header row group" },
-        { label: "<caption>", match: "Table title/caption" }
-      ]
-    },
-    {
-      title: "Forms and Input Types",
-      difficulty: "Advanced",
-      description: "Match common input types and helpers used in forms.",
-      hint: "Placeholders hint, required enforces, and types validate.",
-      xp: 26,
-      pairs: [
-        { label: 'type="email"', match: "Validates email format" },
-        { label: 'type="password"', match: "Hides typed characters" },
-        { label: "required", match: "Prevents empty submission" },
-        { label: "placeholder", match: "Shows example input text" }
-      ]
-    },
-    {
-      title: "Accessibility Essentials",
-      difficulty: "Advanced",
-      description: "Match attributes and tags that improve accessibility.",
-      hint: "Alt text describes images; labels and ARIA aid navigation.",
-      xp: 28,
-      pairs: [
-        { label: "alt", match: "Image alternative text" },
-        { label: "aria-label", match: "Accessible label for controls" },
-        { label: "<label>", match: "Accessible name for inputs" },
-        { label: "<button>", match: "Keyboard-focusable action" }
-      ]
-    }
-  ];
-
-  function createSeededRng(seed) {
-    let state = (seed >>> 0) || 1;
-    return () => {
-      state ^= state << 13;
-      state ^= state >>> 17;
-      state ^= state << 5;
-      return (state >>> 0) / 0xffffffff;
-    };
-  }
-
-  function buildGeneratedPuzzleLevels(totalLevels) {
-    const pool = [
-      { label: "<header>", match: "Intro section of a page" },
-      { label: "<section>", match: "Thematic grouping of content" },
-      { label: "<article>", match: "Self-contained content unit" },
-      { label: "<figure>", match: "Groups media with caption" },
-      { label: "<figcaption>", match: "Caption for a figure" },
-      { label: "<span>", match: "Inline generic container" },
-      { label: "<div>", match: "Block-level generic container" },
-      { label: "<br>", match: "Line break" },
-      { label: "<hr>", match: "Thematic break" },
-      { label: "<code>", match: "Inline code snippet" },
-      { label: "<pre>", match: "Preformatted text block" },
-      { label: "<blockquote>", match: "Quoted section" },
-      { label: "<time>", match: "Machine-readable date/time" },
-      { label: "<mark>", match: "Highlighted text" },
-      { label: "<sup>", match: "Superscript text" },
-      { label: "<sub>", match: "Subscript text" },
-      { label: "<meta>", match: "Metadata tag in head" },
-      { label: "<link>", match: "Links external resources" },
-      { label: "<script>", match: "Runs JavaScript" },
-      { label: "<style>", match: "Inline CSS styles" },
-      { label: "<source>", match: "Media source definition" },
-      { label: "<track>", match: "Subtitles/captions track" },
-      { label: "<thead>", match: "Header row group" },
-      { label: "<tbody>", match: "Body row group" },
-      { label: "<tfoot>", match: "Footer row group" },
-      { label: "<caption>", match: "Table title/caption" },
-      { label: "<textarea>", match: "Multiline text input" },
-      { label: "<select>", match: "Dropdown input" },
-      { label: "<option>", match: "Select choice item" },
-      { label: "<fieldset>", match: "Groups form controls" },
-      { label: "<legend>", match: "Title for a fieldset" },
-      { label: "<datalist>", match: "Autocomplete options list" },
-      { label: "<summary>", match: "Clickable details summary" },
-      { label: "<details>", match: "Disclosure widget" },
-      { label: "<progress>", match: "Progress indicator" },
-      { label: "<meter>", match: "Scalar measurement gauge" },
-      { label: "<canvas>", match: "Draw graphics via JS" },
-      { label: "<svg>", match: "Vector graphics container" },
-      { label: "lang", match: "Document language code" },
-      { label: "charset", match: "Character encoding declaration" },
-      { label: "viewport", match: "Mobile viewport settings" },
-      { label: "rel", match: "Relationship for link tag" },
-      { label: "href", match: "Hyperlink reference URL" },
-      { label: "src", match: "Media/source URL" },
-      { label: "id", match: "Unique element identifier" },
-      { label: "class", match: "Reusable CSS class name" },
-      { label: "tabindex", match: "Keyboard focus order" },
-      { label: "aria-hidden", match: "Hide from assistive tech" },
-      { label: "role", match: "Explicit accessibility role" },
-      { label: "autocomplete", match: "Input autofill behavior" }
-    ];
-
-    const generated = [];
-    const levelsToGenerate = Math.max(0, totalLevels - basePuzzleData.length);
-
-    for (let i = 0; i < levelsToGenerate; i += 1) {
-      const levelIndex = basePuzzleData.length + i;
-      const rng = createSeededRng(0xC0DE1234 ^ levelIndex);
-      const pick = shufflePuzzleDeck(pool.map((item) => item), rng);
-      const pairs = pick.slice(0, 4);
-
-      const difficulty =
-        levelIndex < 15 ? "Beginner" :
-        levelIndex < 35 ? "Intermediate" :
-        "Advanced";
-      const xp = Math.min(40, 10 + Math.floor(levelIndex / 2));
-
-      generated.push({
-        title: `Semantic Match ${levelIndex + 1}`,
-        difficulty,
-        description: "Match tags and attributes to their meanings as fast as you can.",
-        hint: "Look for semantic clues in the wording and pick the most precise match.",
-        xp,
-        pairs: pairs.map((pair) => ({ label: pair.label, match: pair.match }))
-      });
-    }
-
-    return generated;
-  }
-
-  function shufflePuzzleDeck(items, rng = Math.random) {
-    const deck = [...items];
-    for (let i = deck.length - 1; i > 0; i -= 1) {
-      const j = Math.floor(rng() * (i + 1));
-      [deck[i], deck[j]] = [deck[j], deck[i]];
-    }
-    return deck;
-  }
-
-  const puzzleData = [...basePuzzleData, ...buildGeneratedPuzzleLevels(60)];
-
-  const typingWords = [
-    "html", "element", "attribute", "heading", "section", "article",
-    "header", "footer", "button", "semantic", "accessibility", "layout"
-  ];
-
-  const rushQuestions = [
-    { title: "Main page title", prompt: "Which tag should hold the most important page heading?", options: ["<h1>", "<p>", "<small>", "<span>"], answer: "<h1>" },
-    { title: "Navigation links", prompt: "Which semantic tag is best for a group of navigation links?", options: ["<nav>", "<aside>", "<footer>", "<main>"], answer: "<nav>" },
-    { title: "Clickable action", prompt: "Which tag is best for a form action like Submit?", options: ["<button>", "<div>", "<label>", "<strong>"], answer: "<button>" },
-    { title: "Image accessibility", prompt: "Which tag displays an image on a page?", options: ["<img>", "<picture-text>", "<media>", "<figureimg>"], answer: "<img>" },
-    { title: "Standalone article", prompt: "Which tag fits a blog post or news card?", options: ["<article>", "<section>", "<span>", "<em>"], answer: "<article>" },
-    { title: "Grouped content", prompt: "Which tag is ideal for a thematic section of a page?", options: ["<section>", "<mark>", "<b>", "<legend>"], answer: "<section>" },
-    { title: "Form field caption", prompt: "Which tag labels an input for accessibility?", options: ["<label>", "<caption>", "<legend>", "<tag>"], answer: "<label>" },
-    { title: "Table row data", prompt: "Which tag represents one data cell inside a table row?", options: ["<td>", "<tr>", "<th>", "<cell>"], answer: "<td>" },
-    { title: "Audio player", prompt: "Which tag embeds audio with controls?", options: ["<audio>", "<sound>", "<media>", "<voice>"], answer: "<audio>" },
-    { title: "External page embed", prompt: "Which tag embeds another page inside your page?", options: ["<iframe>", "<embedpage>", "<portal>", "<window>"], answer: "<iframe>" }
-  ];
 
   const avatarPresets = {
     wave: buildAvatarDataUri({
@@ -537,33 +294,12 @@
   let currentQuiz = null;
   let currentLessonGroup = null;
   let currentTopic = null;
-
-  let currentPuzzleIndex = 0;
-  let puzzleDeck = [];
-  let puzzleFlippedCards = [];
-  let puzzleMoves = 0;
-  let puzzleMatchedPairs = 0;
-  let puzzleLocked = false;
-  let puzzleStartedAt = 0;
-  let puzzleTimer = null;
-  let typingTimer = null;
-  let typingStartedAt = 0;
-  let typingDuration = 60;
-  let typingTargetText = "";
-  let typingPaused = false;
-  let remainingTypingSeconds = typingDuration;
-  let typingGameInitialized = false;
-  let typingTestActive = false;
+  let cmEditor = null;
 
   let audioContext = null;
-  let rushTimer = null;
-  let rushRoundDuration = 45;
-  let rushTimeLeft = 45;
-  let rushScore = 0;
-  let rushStreak = 0;
-  let currentRushQuestion = null;
-  let rushRoundActive = false;
-  let rushPaused = false;
+  let sprintState = { category: "all", difficulty: "all", lives: 3, score: 0, streak: 0, maxStreak: 0, questionIndex: 0, questions: [], timer: null, timeLeft: 15, active: false, finished: false, totalCorrect: 0, totalQuestions: 0, answered: false };
+  let linkUpState = { category: "all", pairs: [], selectedLeft: null, matchedPairs: [], wrongPairs: [], timer: null, timeLeft: 30, score: 0, active: false, mistakes: 0, finished: false };
+  let bugState = { category: "all", questions: [], questionIndex: 0, score: 0, active: false, streak: 0, totalCorrect: 0, phase: "line", selectedLine: null, finished: false, totalQuestions: 0 };
 
   function buildAvatarDataUri(palette) {
     const svg = `
@@ -874,21 +610,22 @@
     appState.xp = Number.isFinite(progress.xp) ? progress.xp : defaultAppState.xp;
     appState.level = Number.isFinite(progress.level) ? progress.level : defaultAppState.level;
 
-    // Lessons/Quizzes removed: keep only games/typing progress.
-    appState.typingBestWpm = Number.isFinite(progress.typingBestWpm) ? progress.typingBestWpm : defaultAppState.typingBestWpm;
-    appState.completedPuzzles = Array.isArray(progress.completedPuzzles) ? progress.completedPuzzles : [];
+    appState.sprintHighScore = Number.isFinite(progress.sprintHighScore) ? progress.sprintHighScore : defaultAppState.sprintHighScore;
+    appState.typingHighScore = Number.isFinite(progress.typingHighScore) ? progress.typingHighScore : defaultAppState.typingHighScore;
+
+    appState.lessonsDone = Number.isFinite(progress.lessonsDone) ? progress.lessonsDone : defaultAppState.lessonsDone;
+    appState.quizzesTaken = Number.isFinite(progress.quizzesTaken) ? progress.quizzesTaken : defaultAppState.quizzesTaken;
+    appState.completedLessons = Array.isArray(progress.completedLessons) ? progress.completedLessons : defaultAppState.completedLessons;
+    appState.completedQuizzes = Array.isArray(progress.completedQuizzes) ? progress.completedQuizzes : defaultAppState.completedQuizzes;
+
+    appState.studyStreak = Number.isFinite(progress.studyStreak) ? progress.studyStreak : defaultAppState.studyStreak;
+    appState.lastActiveDate = typeof progress.lastActiveDate === "string" ? progress.lastActiveDate : defaultAppState.lastActiveDate;
+    appState.xpHistory = Array.isArray(progress.xpHistory) ? progress.xpHistory : defaultAppState.xpHistory;
 
     appState.darkMode = typeof preferences.darkMode === "boolean" ? preferences.darkMode : defaultAppState.darkMode;
     appState.sessionLock = typeof preferences.sessionLock === "boolean" ? preferences.sessionLock : defaultAppState.sessionLock;
     appState.loginAlerts = typeof preferences.loginAlerts === "boolean" ? preferences.loginAlerts : defaultAppState.loginAlerts;
     appState.lessonHints = typeof preferences.lessonHints === "boolean" ? preferences.lessonHints : defaultAppState.lessonHints;
-    appState.soundEffects = typeof preferences.soundEffects === "boolean" ? preferences.soundEffects : defaultAppState.soundEffects;
-
-    // Neutralize removed progress so analytics/achievements don’t count it.
-    appState.lessonsDone = 0;
-    appState.quizzesTaken = 0;
-    appState.completedLessons = [];
-    appState.completedQuizzes = [];
   }
 
 
@@ -908,20 +645,21 @@
       progress: {
         xp: appState.xp,
         level: appState.level,
-    lessonsDone: 0,
-    quizzesTaken: 0,
-
-        typingBestWpm: appState.typingBestWpm,
+        lessonsDone: appState.lessonsDone,
+        quizzesTaken: appState.quizzesTaken,
+        sprintHighScore: appState.sprintHighScore,
+        typingHighScore: appState.typingHighScore,
+        studyStreak: appState.studyStreak,
+        lastActiveDate: appState.lastActiveDate,
+        xpHistory: appState.xpHistory,
         completedLessons: appState.completedLessons,
-        completedQuizzes: appState.completedQuizzes,
-        completedPuzzles: appState.completedPuzzles
+        completedQuizzes: appState.completedQuizzes
       },
       preferences: {
         darkMode: appState.darkMode,
         sessionLock: appState.sessionLock,
         loginAlerts: appState.loginAlerts,
-        lessonHints: appState.lessonHints,
-        soundEffects: appState.soundEffects
+        lessonHints: appState.lessonHints
       }
     };
   }
@@ -1131,6 +869,15 @@
       '"': "&quot;",
       "'": "&#39;"
     }[char]));
+  }
+
+  function validateWithChecks(code, checks) {
+    for (const [condition, message] of checks) {
+      if (!condition(code)) {
+        return message;
+      }
+    }
+    return true;
   }
 
   function getJSLessonData() {
@@ -1977,8 +1724,186 @@
             validateActivity: (code) => code.includes("const") || code.includes("let")
           }
         ]
+      },
+      {
+        id: 115,
+        title: "The DOM in Depth",
+        difficulty: "Intermediate",
+        intro: "Explore advanced DOM manipulation — traversing, creating, cloning, and removing elements dynamically.",
+        topics: [
+          {
+            id: 143,
+            title: "Create & Append Elements",
+            difficulty: "Intermediate",
+            xp: 60,
+            description: "Create new DOM nodes with document.createElement and attach them with appendChild.",
+            steps: [
+              "Use document.createElement to make any HTML element.",
+              "Set attributes and content on the new element.",
+              "Attach it to the DOM with appendChild or insertBefore."
+            ],
+            code: "const div = document.createElement('div');\ndiv.textContent = 'Hello';\ndocument.body.appendChild(div);",
+            activityPrompt: "Create a paragraph element and append it to the body.",
+            activityStarter: "const p = document.createElement('p');\np.textContent = 'Hi there!';\n\n// Your code here",
+            activityHint: "Use document.body.appendChild(p) to add it.",
+            validateActivity: (code) => code.includes("appendChild")
+          },
+          {
+            id: 144,
+            title: "Traversal & Cloning",
+            difficulty: "Intermediate",
+            xp: 60,
+            description: "Navigate the DOM tree using parentNode, children, nextSibling, and clone nodes with cloneNode.",
+            steps: [
+              "Use parentNode and children to traverse up/down the tree.",
+              "Use nextSibling and previousSibling to move sideways.",
+              "Clone elements with cloneNode(true) for deep copies."
+            ],
+            code: "const parent = document.querySelector('.list');\nconst first = parent.children[0];\nconst clone = first.cloneNode(true);\nparent.appendChild(clone);",
+            activityPrompt: "Select the first child of #container and clone it.",
+            activityStarter: "const container = document.querySelector('#container');\nconst first = container.children[0];\n// Your code here",
+            activityHint: "Call first.cloneNode(true) then container.appendChild().",
+            validateActivity: (code) => code.includes("cloneNode")
+          },
+          {
+            id: 145,
+            title: "Removing Elements",
+            difficulty: "Intermediate",
+            xp: 60,
+            description: "Remove DOM elements cleanly using removeChild or the modern remove() method.",
+            steps: [
+              "Target an element with querySelector or getElementById.",
+              "Call element.remove() to delete it directly.",
+              "Or use parent.removeChild(child) for older browser support."
+            ],
+            code: "const el = document.querySelector('.old-item');\nel.remove();",
+            activityPrompt: "Remove the element with class 'obsolete' from the page.",
+            activityStarter: "const obsolete = document.querySelector('.obsolete');\n// Your code here",
+            activityHint: "Call obsolete.remove() to delete it.",
+            validateActivity: (code) => code.includes(".remove(")
+          }
+        ]
+      },
+      {
+        id: 116,
+        title: "Generators & Iterators",
+        difficulty: "Advanced",
+        intro: "Master generator functions, the yield keyword, and custom iterables for lazy evaluation.",
+        topics: [
+          {
+            id: 146,
+            title: "Generator Functions",
+            difficulty: "Advanced",
+            xp: 85,
+            description: "Generator functions can pause execution with yield and resume later, producing sequences on demand.",
+            steps: [
+              "Declare a generator with function* syntax.",
+              "Use yield to produce values one at a time.",
+              "Call .next() on the generator object to iterate."
+            ],
+            code: "function* countUp() {\n  let i = 0;\n  while (i < 3) yield i++;\n}\nconst gen = countUp();\nconsole.log(gen.next().value); // 0",
+            activityPrompt: "Write a generator that yields 'a', 'b', 'c'.",
+            activityStarter: "function* letters() {\n  // Your code here\n}\n\nconst gen = letters();\nconsole.log(gen.next().value);",
+            activityHint: "Use yield 'a'; yield 'b'; yield 'c';",
+            validateActivity: (code) => code.includes("yield ")
+          },
+          {
+            id: 147,
+            title: "Custom Iterables",
+            difficulty: "Advanced",
+            xp: 85,
+            description: "Make any object iterable by implementing the Symbol.iterator protocol.",
+            steps: [
+              "Define a [Symbol.iterator] method on an object.",
+              "Return an object with a next() method.",
+              "The next() method must return { value, done } objects."
+            ],
+            code: "const range = {\n  from: 1, to: 3,\n  [Symbol.iterator]() {\n    let i = this.from;\n    return { next: () => ({ value: i++, done: i > this.to + 1 }) };\n  }\n};\nconsole.log([...range]); // [1, 2, 3]",
+            activityPrompt: "Create an iterable that counts from 1 to 5.",
+            activityStarter: "const counter = {\n  from: 1, to: 5,\n  // Your code here\n};\nconsole.log([...counter]);",
+            activityHint: "Implement [Symbol.iterator] returning { next }.",
+            validateActivity: (code) => code.includes("Symbol.iterator")
+          },
+          {
+            id: 148,
+            title: "Yield Delegation",
+            difficulty: "Advanced",
+            xp: 85,
+            description: "Delegate generator execution to another generator using yield*.",
+            steps: [
+              "Use yield* inside a generator to delegate to another iterable.",
+              "All values from the delegated generator are yielded in order.",
+              "This composes generator logic without nesting."
+            ],
+            code: "function* a() { yield 1; yield 2; }\nfunction* b() { yield* a(); yield 3; }\nconsole.log([...b()]); // [1, 2, 3]",
+            activityPrompt: "Use yield* to combine two generators.",
+            activityStarter: "function* first() { yield 'x'; yield 'y'; }\nfunction* combined() {\n  // Your code here\n}\nconsole.log([...combined()]);",
+            activityHint: "Add yield* first(); then yield 'z';",
+            validateActivity: (code) => code.includes("yield*")
+          }
+        ]
+      },
+      {
+        id: 117,
+        title: "Web APIs",
+        difficulty: "Intermediate",
+        intro: "Work with browser APIs — localStorage, geolocation, fetch, and notifications — to build richer web apps.",
+        topics: [
+          {
+            id: 149,
+            title: "localStorage API",
+            difficulty: "Intermediate",
+            xp: 70,
+            description: "Store key-value data persistently in the browser using localStorage.",
+            steps: [
+              "Use localStorage.setItem(key, value) to store strings.",
+              "Use localStorage.getItem(key) to retrieve them.",
+              "Values are always strings — use JSON.stringify/parse for objects."
+            ],
+            code: "localStorage.setItem('theme', 'dark');\nconst theme = localStorage.getItem('theme');\nconsole.log(theme); // 'dark'",
+            activityPrompt: "Save a user object to localStorage as JSON.",
+            activityStarter: "const user = { name: 'Alice', score: 100 };\n// Your code here",
+            activityHint: "Use localStorage.setItem('user', JSON.stringify(user)).",
+            validateActivity: (code) => code.includes("setItem") && code.includes("JSON.stringify")
+          },
+          {
+            id: 150,
+            title: "Geolocation API",
+            difficulty: "Intermediate",
+            xp: 70,
+            description: "Access the user's geographic location with the navigator.geolocation API.",
+            steps: [
+              "Call navigator.geolocation.getCurrentPosition(success, error).",
+              "The success callback receives a position object with coords.",
+              "Always handle errors — users can deny permission."
+            ],
+            code: "navigator.geolocation.getCurrentPosition(\n  (pos) => console.log(pos.coords.latitude),\n  (err) => console.error(err.message)\n);",
+            activityPrompt: "Request the user's current position and log the latitude.",
+            activityStarter: "navigator.geolocation.getCurrentPosition(\n  // Your code here\n);",
+            activityHint: "Use (pos) => console.log(pos.coords.latitude) as the success callback.",
+            validateActivity: (code) => code.includes("getCurrentPosition")
+          },
+          {
+            id: 151,
+            title: "Fetch API",
+            difficulty: "Intermediate",
+            xp: 70,
+            description: "Make HTTP requests with the modern fetch() API and handle responses with promises.",
+            steps: [
+              "Call fetch(url) to make a GET request.",
+              "The response object has .ok, .status, and .json() methods.",
+              "Chain .then() or use await to process the result."
+            ],
+            code: "fetch('https://api.example.com/data')\n  .then(res => res.json())\n  .then(data => console.log(data));",
+            activityPrompt: "Make a fetch call and log the JSON response.",
+            activityStarter: "fetch('https://jsonplaceholder.typicode.com/todos/1')\n  // Your code here",
+            activityHint: "Chain .then(res => res.json()).then(data => console.log(data)).",
+            validateActivity: (code) => code.includes("fetch(") && code.includes(".json(")
+          }
+        ]
       }
     ];
+    window.jsLessons = jsLessons;
 
     return jsLessons;
   }
@@ -2015,7 +1940,11 @@
             activityPrompt: "Build a complete HTML skeleton with an h1 inside the body.",
             activityStarter: "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <title>Practice</title>\n</head>\n<body>\n  <h1>Hello World</h1>\n</body>\n</html>",
             activityHint: "Make sure you include both the head and body sections.",
-            validateActivity: (code) => code.includes("<!DOCTYPE html>") && code.includes("<body>") && code.includes("<h1>")
+            validateActivity: (code) => validateWithChecks(code, [
+              [c => c.includes("<!DOCTYPE html>"), "Add the DOCTYPE declaration at the top."],
+              [c => c.includes("<body>"), "You need a <body> section."],
+              [c => c.includes("<h1>"), "Include an <h1> heading inside the body."]
+            ])
           },
           {
             id: 2,
@@ -2032,7 +1961,10 @@
             activityPrompt: "Create one heading and one paragraph.",
             activityStarter: "<h1>My Topic</h1>\n<p>Write a short description here.</p>",
             activityHint: "Use both an h1 and a p tag.",
-            validateActivity: (code) => code.includes("<h1") && code.includes("<p")
+            validateActivity: (code) => validateWithChecks(code, [
+              [c => c.includes("<h1"), "Add an <h1> heading."],
+              [c => c.includes("<p"), "Add a <p> paragraph."]
+            ])
           },
           {
             id: 24,
@@ -2049,7 +1981,9 @@
             activityPrompt: "Create a div with a class attribute.",
             activityStarter: "<div class=\"box\">Content</div>",
             activityHint: "Use class=\"name\" to add a class attribute.",
-            validateActivity: (code) => code.includes("class=")
+            validateActivity: (code) => validateWithChecks(code, [
+              [c => c.includes("class="), "Add a class attribute like class=\"name\"."]
+            ])
           }
         ]
       },
@@ -2074,7 +2008,10 @@
             activityPrompt: "Create a link to https://example.com.",
             activityStarter: '<a href="https://example.com">Visit Example</a>',
             activityHint: "The href should point to https://example.com.",
-            validateActivity: (code) => code.includes("<a") && code.includes('href="https://example.com"')
+            validateActivity: (code) => validateWithChecks(code, [
+              [c => c.includes("<a"), "Add an <a> anchor tag."],
+              [c => c.includes('href="https://example.com"'), 'Set href to "https://example.com".']
+            ])
           },
           {
             id: 4,
@@ -2091,7 +2028,10 @@
             activityPrompt: "Create an image tag with any src and alt text.",
             activityStarter: '<img src="photo.jpg" alt="Describe the image">',
             activityHint: "Include both src and alt attributes.",
-            validateActivity: (code) => code.includes("<img") && code.includes("alt=")
+            validateActivity: (code) => validateWithChecks(code, [
+              [c => c.includes("<img"), "Add an <img> tag."],
+              [c => c.includes("alt="), "Add an alt attribute with descriptive text."]
+            ])
           },
           {
             id: 25,
@@ -2624,6 +2564,36 @@
           ["HTML Entities", "Entities render reserved characters like < and > safely.", "<p>&lt;h1&gt;Hello&lt;/h1&gt;</p>", (code) => code.includes("&lt;")],
           ["Code and Pre", "Use code and pre to show code samples clearly.", "<pre><code>&lt;h1&gt;Hello&lt;/h1&gt;</code></pre>", (code) => code.includes("<pre") && code.includes("<code")]
         ]
+      },
+      {
+        title: "Links Deep Dive",
+        difficulty: "Intermediate",
+        intro: "Master every way to create links: anchor tags, mailto, tel, download, and opening in new tabs.",
+        topics: [
+          ["Mailto Links", "Create clickable email addresses with the mailto: scheme.", '<a href="mailto:hello@example.com">Email us</a>', (code) => code.includes("mailto:")],
+          ["Tel Links", "Phone numbers can be links too using tel: scheme.", '<a href="tel:+1234567890">Call Now</a>', (code) => code.includes("tel:")],
+          ["Download Links", "The download attribute prompts file download instead of navigation.", '<a href="resume.pdf" download>Download Resume</a>', (code) => code.includes("download")]
+        ]
+      },
+      {
+        title: "HTML Best Practices",
+        difficulty: "Intermediate",
+        intro: "Write clean, semantic, and accessible HTML that every developer should know.",
+        topics: [
+          ["DOCTYPE Declaration", "Always start with the correct DOCTYPE to trigger standards mode.", '<!DOCTYPE html>\n<html lang="en"></html>', (code) => code.includes("DOCTYPE")],
+          ["Lang Attribute", "The lang attribute helps screen readers and search engines.", '<html lang="en">', (code) => code.includes("lang=")],
+          ["Meta Viewport", "The viewport meta ensures proper mobile rendering.", '<meta name="viewport" content="width=device-width, initial-scale=1.0">', (code) => code.includes("viewport")]
+        ]
+      },
+      {
+        title: "Embedded Content",
+        difficulty: "Intermediate",
+        intro: "Embed images, videos, iframes, and audio into your pages with proper attributes.",
+        topics: [
+          ["Iframe Embeds", "Embed external pages using the iframe element with security attributes.", '<iframe src="https://example.com" loading="lazy" title="Example"></iframe>', (code) => code.includes("<iframe")],
+          ["Video Element", "Native video playback with controls, sources, and fallback text.", '<video controls width="320"><source src="video.mp4" type="video/mp4">Your browser does not support video.</video>', (code) => code.includes("<video") && code.includes("controls")],
+          ["Audio Element", "Native audio playback with controls and source fallback.", '<audio controls><source src="audio.mp3" type="audio/mpeg">Your browser does not support audio.</audio>', (code) => code.includes("<audio") && code.includes("controls")]
+        ]
       }
     ];
 
@@ -2660,7 +2630,9 @@
       })
     }));
 
-    return baseLessons.concat(extraLessons);
+    const allLessons = baseLessons.concat(extraLessons);
+    window.htmlLessons = allLessons;
+    return allLessons;
   }
 
 
@@ -2698,7 +2670,7 @@
 
         if (index === 1) {
           const correctXp = topic.xp;
-          const xpOptions = Array.from(new Set([correctXp, correctXp - 10, correctXp + 10, correctXp + 20])).filter((value) => value > 0);
+          const xpOptions = Array.from(new Set([correctXp, correctXp - 10, correctXp + 10, correctXp + 20])).filter((value) => value > 0).slice(0, 4);
           return {
             question: `How much XP does "${topic.title}" reward when completed?`,
             options: xpOptions.map((value) => `${value} XP`),
@@ -2716,6 +2688,7 @@
       return {
         id: lesson.id,
         title: `${lesson.title} Quiz`,
+        group: "html",
         difficulty: lesson.difficulty,
         intro: `Answer these questions to prove you understood the ${lesson.title.toLowerCase()} lesson topics.`,
         unlocked,
@@ -2769,6 +2742,7 @@
       return {
         id: lesson.id,
         title: `${lesson.title} Quiz`,
+        group: "js",
         difficulty: lesson.difficulty,
         intro: `Answer these JavaScript questions to prove you understood the ${lesson.title.toLowerCase()} lesson topics.`,
         unlocked,
@@ -2780,58 +2754,452 @@
     });
   }
 
-  function renderAnalytics() {
-    // Dashboard analytics currently reflect only what we track:
-    // - XP/Level
-    // - Typing best WPM
-    // - Puzzle completion
-    // Lessons & quizzes are intentionally neutralized in applyCloudState().
+  function getCSSLessonData() {
+    return [
+      {
+        id: 201,
+        title: "CSS Selectors",
+        difficulty: "Beginner",
+        intro: "Learn how to target HTML elements with CSS selectors — from simple element selectors to combinators.",
+        topics: [
+          {
+            id: 201, title: "Element & Class Selectors", difficulty: "Beginner", xp: 50,
+            description: "Target elements by tag name or class attribute.",
+            steps: ["Use tag names like div { } to style all elements of that type.", "Use .classname { } to style elements with that class.", "Classes can be reused on multiple elements."],
+            code: "div { color: blue; }\n.highlight { background: yellow; }",
+            activityPrompt: "Write a rule that targets all p elements and gives them red text.",
+            activityStarter: "/* Write a selector for all paragraphs then make text red */\n\n",
+            activityHint: "Use p as the selector and set color: red;",
+            validateActivity: (code) => code.includes("p {") && code.includes("color")
+          },
+          {
+            id: 202, title: "ID Selectors & Specificity", difficulty: "Beginner", xp: 50,
+            description: "IDs are unique per page and have higher specificity than classes.",
+            steps: ["Use #idname { } to target a single element by ID.", "IDs override classes when both apply.", "Avoid overusing IDs — they break reusability."],
+            code: "#header { font-size: 2rem; }\n.intro { font-size: 1rem; }",
+            activityPrompt: "Write a rule that targets the element with id 'hero' and gives it a large font size.",
+            activityStarter: "/* Target the element with id 'hero' */\n\n",
+            activityHint: "Use #hero { } as the selector.",
+            validateActivity: (code) => code.includes("#hero") && code.includes("font-size")
+          },
+          {
+            id: 203, title: "Combinators", difficulty: "Beginner", xp: 50,
+            description: "Combine selectors to target elements based on their relationship in the DOM.",
+            steps: ["Child selector: parent > child", "Descendant selector: ancestor descendant", "Adjacent sibling: element + sibling"],
+            code: "ul > li { list-style: none; }\narticle p { line-height: 1.6; }\nh2 + p { margin-top: 0; }",
+            activityPrompt: "Write a child combinator that selects all li inside a ul and removes bullet points.",
+            activityStarter: "/* Style li elements inside ul */\n\n",
+            activityHint: "Use ul > li and set list-style: none;",
+            validateActivity: (code) => code.includes(">") && code.includes("list-style")
+          }
+        ]
+      },
+      {
+        id: 202,
+        title: "Box Model",
+        difficulty: "Beginner",
+        intro: "Understand the CSS box model — content, padding, border, and margin — and how they affect element sizing.",
+        topics: [
+          {
+            id: 204, title: "Content & Padding", difficulty: "Beginner", xp: 55,
+            description: "Padding creates space inside the element between content and border.",
+            steps: ["Content is the inner area holding text or child elements.", "Padding adds space around the content.", "Use padding shorthand: padding: top right bottom left;"],
+            code: ".card { padding: 20px; }\n.card-title { padding: 0 10px; }",
+            activityPrompt: "Add 16px of padding to a button class.",
+            activityStarter: ".btn {\n  /* your code */\n}",
+            activityHint: "Add padding: 16px; inside .btn { }",
+            validateActivity: (code) => code.includes("padding")
+          },
+          {
+            id: 205, title: "Border", difficulty: "Beginner", xp: 55,
+            description: "Borders surround the padding and come in many styles, widths, and colors.",
+            steps: ["Use border: width style color; shorthand.", "Common styles: solid, dashed, dotted.", "Border-radius rounds the corners."],
+            code: ".box { border: 2px solid #333; border-radius: 8px; }",
+            activityPrompt: "Give a class 'card' a 1px solid gray border with rounded corners.",
+            activityStarter: ".card {\n  /* your code */\n}",
+            activityHint: "Use border: 1px solid gray; border-radius: 4px;",
+            validateActivity: (code) => code.includes("border")
+          },
+          {
+            id: 206, title: "Margin & Auto", difficulty: "Beginner", xp: 55,
+            description: "Margin creates space outside the element; margin: auto centers block elements horizontally.",
+            steps: ["Margin pushes other elements away.", "margin: auto with a set width centers horizontally.", "Negative margins pull elements closer."],
+            code: ".container { margin: 0 auto; width: 80%; }\n.spacer { margin-top: 20px; }",
+            activityPrompt: "Center a div with class 'wrapper' using margin auto and give it width 600px.",
+            activityStarter: ".wrapper {\n  /* your code */\n}",
+            activityHint: "Set margin: 0 auto; and width: 600px;",
+            validateActivity: (code) => code.includes("margin") && code.includes("auto")
+          }
+        ]
+      },
+      {
+        id: 203,
+        title: "Flexbox",
+        difficulty: "Intermediate",
+        intro: "Master CSS Flexbox for one-dimensional layouts — aligning, distributing, and reordering items.",
+        topics: [
+          {
+            id: 207, title: "Flex Container", difficulty: "Intermediate", xp: 65,
+            description: "Turn any element into a flex container to control child layout.",
+            steps: ["Set display: flex on the parent.", "Flex items align in a row by default.", "Use flex-direction to switch to column."],
+            code: ".row { display: flex; gap: 10px; }\n.column { display: flex; flex-direction: column; }",
+            activityPrompt: "Create a flex container with class 'nav' that displays items in a row.",
+            activityStarter: ".nav {\n  /* your code */\n}",
+            activityHint: "Set display: flex; on .nav",
+            validateActivity: (code) => code.includes("display: flex")
+          },
+          {
+            id: 208, title: "Alignment & Justification", difficulty: "Intermediate", xp: 65,
+            description: "Align items along the cross axis and justify them along the main axis.",
+            steps: ["align-items: center centers vertically (in a row).", "justify-content: space-between spreads items evenly.", "gap adds consistent spacing between items."],
+            code: ".center { display: flex; align-items: center; justify-content: center; gap: 12px; }",
+            activityPrompt: "Style a toolbar class that centers items horizontally with 8px gaps.",
+            activityStarter: ".toolbar {\n  display: flex;\n  /* your code */\n}",
+            activityHint: "Use align-items: center and gap: 8px",
+            validateActivity: (code) => code.includes("align-items") && code.includes("gap")
+          },
+          {
+            id: 209, title: "Flex Items", difficulty: "Intermediate", xp: 65,
+            description: "Control individual flex items with flex-grow, flex-shrink, and order.",
+            steps: ["flex-grow: 1 makes an item fill available space.", "flex-shrink: 0 prevents an item from shrinking.", "order changes visual order without changing HTML."],
+            code: ".item { flex: 1; }\n.sidebar { flex: 0 0 250px; }\n.last { order: 1; }",
+            activityPrompt: "Give the class 'main' a flex-grow of 2 so it takes up twice the space.",
+            activityStarter: ".main {\n  /* your code */\n}",
+            activityHint: "Set flex: 2 or flex-grow: 2",
+            validateActivity: (code) => code.includes("flex:")
+          }
+        ]
+      },
+      {
+        id: 204,
+        title: "CSS Grid",
+        difficulty: "Intermediate",
+        intro: "Build two-dimensional layouts with CSS Grid — rows, columns, areas, and responsive sizing.",
+        topics: [
+          {
+            id: 210, title: "Grid Container & Tracks", difficulty: "Intermediate", xp: 70,
+            description: "Define a grid container with rows and columns using grid-template.",
+            steps: ["Set display: grid on the parent.", "Use grid-template-columns to define column widths.", "Use grid-template-rows for row heights."],
+            code: ".grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }",
+            activityPrompt: "Create a 2-column grid with equal-width columns.",
+            activityStarter: ".two-col {\n  display: grid;\n  /* your code */\n}",
+            activityHint: "Use grid-template-columns: 1fr 1fr;",
+            validateActivity: (code) => code.includes("grid-template-columns")
+          },
+          {
+            id: 211, title: "Grid Placement", difficulty: "Intermediate", xp: 70,
+            description: "Place items anywhere in the grid using line numbers or named areas.",
+            steps: ["grid-column: 1 / 3 spans from line 1 to line 3.", "grid-area places an item into a named region.", "Grid lines start at 1, not 0."],
+            code: ".header { grid-column: 1 / -1; }\n.sidebar { grid-row: 2 / 4; }",
+            activityPrompt: "Make a class 'banner' span all columns using grid-column.",
+            activityStarter: ".banner {\n  /* your code */\n}",
+            activityHint: "Use grid-column: 1 / -1;",
+            validateActivity: (code) => code.includes("grid-column")
+          },
+          {
+            id: 212, title: "Auto-fit & Minmax", difficulty: "Intermediate", xp: 70,
+            description: "Create responsive grids that auto-adjust column count with auto-fit and minmax.",
+            steps: ["auto-fit fills the row with as many columns as fit.", "minmax(min, max) sets a flexible size range.", "Combine: repeat(auto-fit, minmax(250px, 1fr))"],
+            code: ".responsive { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; }",
+            activityPrompt: "Create a responsive grid where each column is at least 200px wide.",
+            activityStarter: ".responsive-grid {\n  display: grid;\n  /* your code */\n}",
+            activityHint: "Use repeat(auto-fit, minmax(200px, 1fr))",
+            validateActivity: (code) => code.includes("auto-fit") || code.includes("auto-fill")
+          }
+        ]
+      },
+      {
+        id: 205,
+        title: "Typography & Colors",
+        difficulty: "Beginner",
+        intro: "Style text with fonts, sizes, weights, line-heights, and color systems including hex, rgb, and hsl.",
+        topics: [
+          {
+            id: 213, title: "Font Properties", difficulty: "Beginner", xp: 50,
+            description: "Control font family, size, weight, and style of text.",
+            steps: ["font-family sets the typeface.", "font-size uses px, rem, or em units.", "font-weight controls boldness (400=normal, 700=bold)."],
+            code: "body { font-family: 'Segoe UI', sans-serif; font-size: 16px; }\nh1 { font-weight: 700; }",
+            activityPrompt: "Set the body font to Arial, size 18px, normal weight.",
+            activityStarter: "body {\n  /* your code */\n}",
+            activityHint: "Use font-family: Arial; font-size: 18px; font-weight: 400;",
+            validateActivity: (code) => code.includes("font-family") && code.includes("font-size")
+          },
+          {
+            id: 214, title: "Color Values", difficulty: "Beginner", xp: 50,
+            description: "Use hex, rgb, rgba, and hsl to add color to text and backgrounds.",
+            steps: ["Hex: #ff6600 — 6-digit shorthand for RGB.", "rgb(255, 0, 0) — red, green, blue channels.", "rgba adds alpha transparency (0-1)."],
+            code: ".text { color: #333; }\n.bg { background: rgba(0, 0, 0, 0.5); }",
+            activityPrompt: "Give a class 'overlay' a semi-transparent black background using rgba.",
+            activityStarter: ".overlay {\n  /* your code */\n}",
+            activityHint: "Use background: rgba(0, 0, 0, 0.6);",
+            validateActivity: (code) => code.includes("rgba")
+          },
+          {
+            id: 215, title: "Line Height & Spacing", difficulty: "Beginner", xp: 50,
+            description: "Improve readability with line-height, letter-spacing, and text-align.",
+            steps: ["line-height: 1.6 creates comfortable reading spacing.", "letter-spacing adds space between characters.", "text-align: center/left/right/justify aligns text."],
+            code: "p { line-height: 1.6; letter-spacing: 0.02em; text-align: justify; }",
+            activityPrompt: "Style article text with 1.8 line-height and justified alignment.",
+            activityStarter: "article {\n  /* your code */\n}",
+            activityHint: "Set line-height: 1.8; text-align: justify;",
+            validateActivity: (code) => code.includes("line-height") && code.includes("text-align")
+          }
+        ]
+      },
+      {
+        id: 206,
+        title: "Backgrounds & Gradients",
+        difficulty: "Beginner",
+        intro: "Add visual flair with background images, colors, gradients, and advanced background properties.",
+        topics: [
+          {
+            id: 216, title: "Background Basics", difficulty: "Beginner", xp: 55,
+            description: "Set background colors, images, and control repeating and positioning.",
+            steps: ["background-color fills the element with a solid color.", "background-image: url() loads an image.", "background-repeat and background-position control placement."],
+            code: ".hero { background-color: #1a1a2e; background-image: url('bg.png'); background-size: cover; }",
+            activityPrompt: "Create a hero section with a dark background color and a background image.",
+            activityStarter: ".hero {\n  /* your code */\n}",
+            activityHint: "Use background-color and background-image with url().",
+            validateActivity: (code) => code.includes("background-color") && code.includes("background-image")
+          },
+          {
+            id: 217, title: "Linear Gradients", difficulty: "Beginner", xp: 55,
+            description: "Create smooth color transitions with linear-gradient() backgrounds.",
+            steps: ["linear-gradient(direction, color1, color2)", "Direction can be to right, to bottom, 45deg.", "Multiple color stops create complex gradients."],
+            code: ".gradient { background: linear-gradient(135deg, #667eea, #764ba2); }",
+            activityPrompt: "Create a button with a left-to-right blue-to-purple gradient.",
+            activityStarter: ".btn-gradient {\n  /* your code */\n}",
+            activityHint: "Use background: linear-gradient(to right, blue, purple);",
+            validateActivity: (code) => code.includes("linear-gradient")
+          },
+          {
+            id: 218, title: "Multiple Backgrounds", difficulty: "Beginner", xp: 55,
+            description: "Layer multiple background images and gradients on a single element.",
+            steps: ["Separate backgrounds with commas.", "The first background appears on top.", "Combine gradients and images for rich effects."],
+            code: ".card { background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('photo.jpg') center/cover; }",
+            activityPrompt: "Layer a semi-transparent overlay gradient on top of a background image.",
+            activityStarter: ".overlay-card {\n  /* your code */\n}",
+            activityHint: "Use background: linear-gradient(...), url(...) center/cover;",
+            validateActivity: (code) => code.includes("background:")
+          }
+        ]
+      },
+      {
+        id: 207,
+        title: "Transitions & Animations",
+        difficulty: "Intermediate",
+        intro: "Bring your UI to life with CSS transitions, transforms, and keyframe animations.",
+        topics: [
+          {
+            id: 219, title: "CSS Transitions", difficulty: "Intermediate", xp: 70,
+            description: "Smoothly transition between property values over a duration.",
+            steps: ["transition-property: the property to animate.", "transition-duration: how long it takes.", "Shorthand: transition: property duration easing;"],
+            code: ".btn { transition: background 0.3s ease, transform 0.2s; }\n.btn:hover { background: blue; transform: scale(1.05); }",
+            activityPrompt: "Add a 0.3s transition on opacity for a fade-in effect on hover.",
+            activityStarter: ".fade {\n  opacity: 0.5;\n  transition: /* your code */;\n}\n.fade:hover { opacity: 1; }",
+            activityHint: "Use transition: opacity 0.3s ease;",
+            validateActivity: (code) => code.includes("transition:")
+          },
+          {
+            id: 220, title: "CSS Transforms", difficulty: "Intermediate", xp: 70,
+            description: "Scale, rotate, translate, and skew elements in 2D space.",
+            steps: ["transform: scale(1.2) grows an element.", "transform: rotate(45deg) spins it.", "transform: translate(x, y) moves it."],
+            code: ".card:hover { transform: translateY(-4px) scale(1.02); }",
+            activityPrompt: "Make a button grow slightly on hover using transform.",
+            activityStarter: ".btn:hover {\n  /* your code */\n}",
+            activityHint: "Use transform: scale(1.1);",
+            validateActivity: (code) => code.includes("transform:")
+          },
+          {
+            id: 221, title: "Keyframe Animations", difficulty: "Intermediate", xp: 70,
+            description: "Create multi-step animations with @keyframes and the animation property.",
+            steps: ["Define @keyframes with named stages (0%, 100%).", "Use animation-name, animation-duration, and animation-iteration-count.", "animation shorthand combines all properties."],
+            code: "@keyframes pulse {\n  0% { transform: scale(1); }\n  50% { transform: scale(1.05); }\n  100% { transform: scale(1); }\n}\n.pulse { animation: pulse 2s infinite; }",
+            activityPrompt: "Create a 'fadeIn' keyframe animation that goes from opacity 0 to 1.",
+            activityStarter: "@keyframes fadeIn {\n  /* your code */\n}\n\n.fade-in {\n  animation: fadeIn 1s ease;\n}",
+            activityHint: "Use 0% { opacity: 0; } and 100% { opacity: 1; }",
+            validateActivity: (code) => code.includes("@keyframes") && code.includes("opacity")
+          }
+        ]
+      },
+      {
+        id: 208,
+        title: "Responsive Design",
+        difficulty: "Advanced",
+        intro: "Make layouts adapt to any screen size with media queries, relative units, and mobile-first techniques.",
+        topics: [
+          {
+            id: 222, title: "Media Queries", difficulty: "Advanced", xp: 80,
+            description: "Apply CSS rules conditionally based on viewport width, device type, and more.",
+            steps: ["Use @media (max-width: 768px) for mobile breakpoints.", "Place queries at the end of your stylesheet.", "Mobile-first uses min-width queries."],
+            code: "@media (max-width: 768px) {\n  .grid { grid-template-columns: 1fr; }\n  .nav { flex-direction: column; }\n}",
+            activityPrompt: "Write a media query that hides a sidebar class below 600px.",
+            activityStarter: "@media (max-width: 600px) {\n  /* your code */\n}",
+            activityHint: "Use .sidebar { display: none; } inside the query.",
+            validateActivity: (code) => code.includes("@media") && code.includes("display: none")
+          },
+          {
+            id: 223, title: "Relative Units", difficulty: "Advanced", xp: 80,
+            description: "Use rem, em, vw, vh, and % for flexible, scalable designs.",
+            steps: ["rem is relative to root font-size (usually 16px).", "em is relative to the parent's font-size.", "vw/vh are percentages of the viewport."],
+            code: "html { font-size: 16px; }\nh1 { font-size: 2rem; }\n.hero { height: 100vh; }",
+            activityPrompt: "Set a full-viewport-height hero section using vh units.",
+            activityStarter: ".hero {\n  /* your code */\n}",
+            activityHint: "Use height: 100vh;",
+            validateActivity: (code) => code.includes("vh") || code.includes("vw")
+          },
+          {
+            id: 224, title: "Mobile-First Patterns", difficulty: "Advanced", xp: 80,
+            description: "Start with a single-column mobile layout and progressively enhance for larger screens.",
+            steps: ["Default styles target mobile screens.", "Use min-width media queries to add complexity.", "This approach is simpler and more robust."],
+            code: ".grid { display: flex; flex-direction: column; gap: 12px; }\n@media (min-width: 768px) {\n  .grid { display: grid; grid-template-columns: 1fr 1fr; }\n}",
+            activityPrompt: "Create a mobile-first layout: single column by default, two columns above 768px.",
+            activityStarter: ".layout {\n  /* default: single column */\n}\n\n@media (min-width: 768px) {\n  .layout {\n    /* two columns */\n  }\n}",
+            activityHint: "Default: display: flex; flex-direction: column; Above 768px: display: grid; grid-template-columns: 1fr 1fr;",
+            validateActivity: (code) => code.includes("@media") && code.includes("grid-template-columns")
+          }
+        ]
+      }
+    ];
+  }
 
+  function getCSSQuizData() {
+    const lessons = getCSSLessonData();
+    const allTopics = lessons.flatMap((lesson) => lesson.topics.map((topic) => topic.title));
+    const difficultyOptions = ["Beginner", "Intermediate", "Advanced"];
+
+    return lessons.map((lesson) => {
+      const unlocked = lesson.topics.every((topic) => appState.completedLessons.includes(topic.id));
+      const completed = appState.completedQuizzes.includes(lesson.id);
+      const questions = lesson.topics.slice(0, 3).map((topic, index) => {
+        const correctXp = topic.xp;
+        const xpOptions = Array.from(new Set([correctXp, correctXp - 10, correctXp + 10, correctXp + 20])).filter((value) => value > 0).slice(0, 4);
+        const topicOptions = Array.from(new Set([
+          topic.title,
+          ...allTopics.filter((title) => title !== topic.title).slice(index * 2, index * 2 + 3)
+        ])).slice(0, 4);
+
+        if (index === 0) {
+          return {
+            question: `Which topic belongs to the "${lesson.title}" lesson group?`,
+            options: topicOptions,
+            answer: topic.title
+          };
+        }
+
+        if (index === 1) {
+          return {
+            question: `How much XP does "${topic.title}" reward when completed?`,
+            options: xpOptions.map((value) => `${value} XP`),
+            answer: `${correctXp} XP`
+          };
+        }
+
+        return {
+          question: `What difficulty level is "${topic.title}"?`,
+          options: difficultyOptions,
+          answer: topic.difficulty
+        };
+      });
+
+      return {
+        id: lesson.id,
+        title: `${lesson.title} Quiz`,
+        group: "css",
+        difficulty: lesson.difficulty,
+        intro: `Answer these CSS questions to prove you understood the ${lesson.title.toLowerCase()} lesson topics.`,
+        unlocked,
+        completed,
+        lessonTitle: lesson.title,
+        questionCount: questions.length,
+        questions
+      };
+    });
+  }
+
+  function updateDailyStreak() {
+    const today = new Date().toISOString().split("T")[0];
+    if (!appState.lastActiveDate) {
+      appState.studyStreak = 1;
+    } else if (appState.lastActiveDate === today) {
+      // already active today, streak unchanged
+    } else {
+      const lastDate = new Date(appState.lastActiveDate);
+      const diffDays = Math.round((new Date(today) - lastDate) / (1000 * 60 * 60 * 24));
+      appState.studyStreak = diffDays === 1 ? appState.studyStreak + 1 : 1;
+    }
+    appState.lastActiveDate = today;
+  }
+
+  function logXpEarned(amount) {
+    if (amount <= 0) return;
+    const today = new Date().toISOString().split("T")[0];
+    let entry = appState.xpHistory.find(e => e.date === today);
+    if (entry) {
+      entry.xp += amount;
+    } else {
+      appState.xpHistory.push({ date: today, xp: amount });
+    }
+    if (appState.xpHistory.length > 14) {
+      appState.xpHistory = appState.xpHistory.slice(-14);
+    }
+  }
+
+  function renderAnalytics() {
     const nextLevelXp = appState.level * 200;
     const xpToNext = Math.max(0, nextLevelXp - appState.xp);
 
-    const puzzleTotal = puzzleData.length;
-    const puzzleDone = appState.completedPuzzles.length;
+    const gamePercent = Math.max(0, Math.min(100, Math.round((appState.sprintHighScore || 0) / 5)));
 
-    const puzzlePercent = Math.max(0, Math.min(100, puzzleTotal ? Math.round((puzzleDone / puzzleTotal) * 100) : 0));
-    const typingPercent = Math.max(0, Math.min(100, Math.round((appState.typingBestWpm / 100) * 100)));
+    // Actual lesson (topic) completion
+    const htmlLessons = getLessonData();
+    const jsLessons = getJSLessonData();
+    const cssLessons = getCSSLessonData();
+    const totalTopics = htmlLessons.reduce((sum, l) => sum + l.topics.length, 0) +
+                        jsLessons.reduce((sum, l) => sum + l.topics.length, 0) +
+                        cssLessons.reduce((sum, l) => sum + l.topics.length, 0);
+    const completedTopics = appState.completedLessons.length;
+    const lessonPercent = Math.max(0, Math.min(100, totalTopics ? Math.round((completedTopics / totalTopics) * 100) : 0));
 
-    // Completion rate = weighted blend of puzzles + typing progress.
-    const completionRate = Math.max(0, Math.min(100, Math.round((puzzlePercent * 0.6) + (typingPercent * 0.4))));
+    // Actual quiz completion
+    const htmlQuizzes = getHTMLQuizData();
+    const jsQuizzes = getJSQuizData();
+    const cssQuizzes = getCSSQuizData();
+    const totalQuizzes = htmlQuizzes.length + jsQuizzes.length + cssQuizzes.length;
+    const completedQuizzes = appState.completedQuizzes.length;
+    const quizPercent = Math.max(0, Math.min(100, totalQuizzes ? Math.round((completedQuizzes / totalQuizzes) * 100) : 0));
+
+    // Completion rate = weighted blend of all activities.
+    const completionRate = Math.max(0, Math.min(100, Math.round(
+      (lessonPercent * 0.45) + (quizPercent * 0.30) + (gamePercent * 0.25)
+    )));
 
     const activityScore = Math.round(
-      (appState.xp * 0.35) +
-      (puzzleDone * 20) +
-      (appState.typingBestWpm * 3)
+      (appState.xp * 0.30) +
+      (completedTopics * 25) +
+      (completedQuizzes * 40) +
+      ((appState.sprintHighScore || 0) * 5)
     );
-
-    // Derived streak from activity, capped for UI.
-    const streak = Math.max(1, Math.min(14, Math.round((puzzleDone * 0.75) + (appState.typingBestWpm / 12))));
 
     const accountStatus =
       appState.level >= 5 ? "Elite" :
       appState.level >= 3 ? "Advanced" :
       "Standard";
 
-    // Since lessons/quizzes are not tracked, map the remaining bars to available metrics
-    // so the UI does not show permanent zeros.
-    // - “Lessons” bar shows puzzle progress (closest available learning proxy)
-    // - “Quizzes” bar shows typing progress
-    const lessonPercent = puzzlePercent;
-    const quizPercent = typingPercent;
+    const today = new Date();
+    const weeklySeries = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toISOString().split("T")[0];
+      const entry = appState.xpHistory.find(e => e.date === dateStr);
+      weeklySeries.push(entry ? entry.xp : 0);
+    }
+    const maxXp = Math.max(...weeklySeries, 1);
+    const chartValues = weeklySeries.map(v => Math.round((v / maxXp) * 100));
 
-    const weeklySeries = [
-      Math.max(8, Math.round(puzzlePercent * 0.50 + typingPercent * 0.30)),
-      Math.max(10, Math.round(puzzlePercent * 0.55 + typingPercent * 0.35)),
-      Math.max(12, Math.round(puzzlePercent * 0.60 + typingPercent * 0.20)),
-      Math.max(18, Math.round(puzzlePercent * 0.70 + typingPercent * 0.15)),
-      Math.max(22, Math.round(puzzlePercent * 0.65 + typingPercent * 0.35)),
-      Math.max(26, Math.round(puzzlePercent * 0.60 + typingPercent * 0.40)),
-      Math.max(30, Math.round((puzzlePercent + typingPercent) / 2))
-    ];
-
-    const lastPoint = weeklySeries[weeklySeries.length - 1];
-    const previousPoint = weeklySeries[weeklySeries.length - 2] || lastPoint;
+    const lastPoint = chartValues[chartValues.length - 1];
+    const previousPoint = chartValues[chartValues.length - 2] || lastPoint;
     const chartDelta = previousPoint ? Math.round(((lastPoint - previousPoint) / previousPoint) * 100) : 0;
 
     const setText = (id, value) => {
@@ -2854,20 +3222,21 @@
 
     setText("analyticsCompletionRate", `${completionRate}%`);
     setText("analyticsXpToNext", `${xpToNext} XP`);
-    setText("analyticsTypingPeak", `${appState.typingBestWpm} WPM`);
-    setText("analyticsPuzzleProgress", `${puzzleDone}/${puzzleTotal}`);
-    setText("analyticsStudyStreak", `${streak} day${streak === 1 ? "" : "s"}`);
+    setText("analyticsGameScore", `${appState.sprintHighScore || 0} pts`);
+    setText("analyticsStudyStreak", `${appState.studyStreak} day${appState.studyStreak === 1 ? "" : "s"}`);
     setText("analyticsActivityScore", activityScore);
     setText("analyticsAccountStatus", accountStatus);
+    setText("analyticsTopicsCompleted", `${completedTopics}/${totalTopics}`);
     setText("analyticsChartDelta", `${chartDelta >= 0 ? "+" : ""}${chartDelta}%`);
 
     setBar("analyticsBarLessons", "analyticsBarLessonsValue", lessonPercent);
-    setBar("analyticsBarPuzzles", "analyticsBarPuzzlesValue", puzzlePercent);
-    setBar("analyticsBarTyping", "analyticsBarTypingValue", typingPercent);
+    setBar("analyticsBarGames", "analyticsBarGamesValue", gamePercent);
+    const typingWpmPct = Math.min(100, Math.round((appState.typingHighScore || 0) / 100 * 100));
+    setBar("analyticsBarTyping", "analyticsBarTypingValue", typingWpmPct);
     setBar("analyticsBarQuizzes", "analyticsBarQuizzesValue", quizPercent);
 
-    const linePoints = weeklySeries.map((value, index) => {
-      const x = (index / (weeklySeries.length - 1)) * 320;
+    const linePoints = chartValues.map((value, index) => {
+      const x = (index / (chartValues.length - 1)) * 320;
       const y = 150 - (value / 100) * 120;
       return `${x},${y}`;
     }).join(" ");
@@ -2878,28 +3247,36 @@
     if (lineGlow) lineGlow.setAttribute("points", linePoints);
     if (linePath) linePath.setAttribute("points", linePoints);
     if (dots) {
-      dots.innerHTML = weeklySeries.map(() => '<span class="line-dot"></span>').join("");
+      dots.innerHTML = chartValues.map(() => '<span class="line-dot"></span>').join("");
     }
   }
 
   function updateDashboard() {
+    updateDailyStreak();
     appState.level = calculateLevel();
 
     const nextLevelXp = appState.level * 200;
     const previousLevelXp = (appState.level - 1) * 200;
-    const progressWithinLevel = ((appState.xp - previousLevelXp) / (nextLevelXp - previousLevelXp)) * 100;
+    const totalXpTarget = nextLevelXp;
+    const progressWithinLevel = Math.min(100, ((appState.xp - previousLevelXp) / (totalXpTarget - previousLevelXp)) * 100);
 
-    // Dashboard “progress overview” (motivational, not tied to lessons since lessons are neutralized).
-    const completionPercent = Math.max(0, Math.min(100, Math.round(progressWithinLevel)));
+    // Completion = equal blend of lessons, quizzes, and games
+    const htmlLessons = getLessonData();
+    const jsLessons = getJSLessonData();
+    const cssLessons = getCSSLessonData();
+    const totalTopics = htmlLessons.reduce((s, l) => s + l.topics.length, 0) +
+                        jsLessons.reduce((s, l) => s + l.topics.length, 0) +
+                        cssLessons.reduce((s, l) => s + l.topics.length, 0);
+    const lessonPercent = totalTopics ? Math.round((appState.completedLessons.length / totalTopics) * 100) : 0;
 
-    // Derived streak (since there is no real study streak tracking in the current data model).
-    const derivedStreakDays = Math.max(
-      1,
-      Math.min(
-        30,
-        Math.floor((appState.typingBestWpm / 12) + (appState.completedPuzzles?.length || 0) * 0.6 + (appState.xp / 500))
-      )
-    );
+    const htmlQuizzes = getHTMLQuizData();
+    const jsQuizzes = getJSQuizData();
+    const cssQuizzes = getCSSQuizData();
+    const totalQuizzes = htmlQuizzes.length + jsQuizzes.length + cssQuizzes.length;
+    const quizPercent = totalQuizzes ? Math.round((appState.completedQuizzes.length / totalQuizzes) * 100) : 0;
+
+    const gamePercent = Math.min(100, Math.round((appState.sprintHighScore || 0) / 5));
+    const completionPercent = Math.max(0, Math.min(100, Math.round((lessonPercent + quizPercent + gamePercent) / 3)));
 
     // Next level computations for XP/Level indicators.
     const xpToNext = Math.max(0, nextLevelXp - appState.xp);
@@ -2916,9 +3293,22 @@
     setText("level", appState.level);
     setText("xp", appState.xp);
 
-    setText("welcomeBack", `Welcome back, ${appState.nickname || appState.user || "Learner"}`);
+    const isNewUser = appState.completedLessons.length === 0 && appState.completedQuizzes.length === 0;
+    setText("welcomeBack", isNewUser ? "Welcome to CodeLab" : `Welcome back, ${appState.nickname || appState.user || "Learner"}`);
     setText("progressPercent", `${completionPercent}%`);
-    setText("streakDays", `${derivedStreakDays} day${derivedStreakDays === 1 ? "" : "s"}`);
+    setText("streakDays", `${appState.studyStreak} day${appState.studyStreak === 1 ? "" : "s"}`);
+
+    const blurbEl = document.getElementById("progressBlurb");
+    if (blurbEl) {
+      const streak = appState.studyStreak;
+      const topicsDone = appState.completedLessons.length;
+      const quizzesDone = appState.completedQuizzes.length;
+      const totalDone = topicsDone + quizzesDone;
+      blurbEl.textContent =
+        streak > 5 ? `${streak}-day streak on fire! Keep the momentum going.` :
+        totalDone > 0 ? `You've completed ${totalDone} activities so far. Keep it up!` :
+        `Start with a lesson or quiz to begin your learning journey.`;
+    }
 
     const xpLevelLine = `${appState.xp} XP • Level ${appState.level}`;
     setText("xpLevelDisplay", xpLevelLine);
@@ -2950,6 +3340,7 @@
       progress.style.width = `${Math.max(8, Math.min(100, progressWithinLevel))}%`;
     }
 
+    renderCategoryProgress();
     renderBadges();
     renderAchievements();
     renderAnalytics();
@@ -2967,6 +3358,33 @@
     }
   }
 
+  function renderCategoryProgress() {
+    const htmlLessons = getLessonData();
+    const jsLessons = getJSLessonData();
+    const cssLessons = getCSSLessonData();
+
+    function calcCat(lessons) {
+      const topics = lessons.flatMap(l => l.topics);
+      const done = topics.filter(t => appState.completedLessons.includes(t.id)).length;
+      return topics.length ? Math.round((done / topics.length) * 100) : 0;
+    }
+
+    const htmlPct = calcCat(htmlLessons);
+    const jsPct = calcCat(jsLessons);
+    const cssPct = calcCat(cssLessons);
+
+    const setCat = (barId, labelId, pct) => {
+      const bar = document.getElementById(barId);
+      const label = document.getElementById(labelId);
+      if (bar) bar.style.width = `${pct}%`;
+      if (label) label.textContent = `${pct}%`;
+    };
+
+    setCat("catProgHtml", "catProgHtmlLabel", htmlPct);
+    setCat("catProgJs", "catProgJsLabel", jsPct);
+    setCat("catProgCss", "catProgCssLabel", cssPct);
+  }
+
   function renderBadges() {
     const badges = document.getElementById("badges");
     if (!badges) {
@@ -2975,7 +3393,7 @@
 
     const items = [
       { label: "Fast Learner", value: `${appState.xp} XP` },
-      { label: "Typing Best", value: `${appState.typingBestWpm} WPM` }
+      { label: "Sprint High", value: `${appState.sprintHighScore || 0} pts` }
     ];
 
     badges.innerHTML = items.map((item) => `
@@ -2993,8 +3411,8 @@
       return;
     }
 
-    // Lessons/Quizzes were removed from the app UI. Keep analytics/achievements stable.
-    const completedLessons = 0;
+    const completedLessons = appState.completedLessons.length;
+    const completedQuizzes = appState.completedQuizzes.length;
     const achievements = [];
 
 
@@ -3012,31 +3430,29 @@
 
     pushGenerated("XP Milestone", ["⚡", "💠", "💎", "🏦", "🌟", "🏵️", "🔷", "🪙", "✨", "🌠"], [100,200,300,400,500,600,700,800,900,1000,1200,1400,1600,1800,2000], appState.xp, "XP", "Reach");
     pushGenerated("Level Climb", ["🚀", "👑", "🏅", "🌌", "🪐", "🌠", "🎖️", "🏔️", "☄️", "🦅"], [2,3,4,5,6,7,8,9,10,11,12,13,14,15,16], appState.level, "levels", "Reach");
-    pushGenerated("Typing Pace", ["⌨️", "🔥", "💨", "⚙️", "🚄", "🎯", "🧿", "📈", "🏎️", "🪄"], [10,15,20,25,30,35,40,45,50,55,60,70,80,90,100], appState.typingBestWpm, "WPM", "Reach");
-    pushGenerated("Puzzle Path", ["🧩", "🏆", "🗝️", "🧪", "🛡️", "🔮", "🎲", "🧱", "🕹️", "🎮"], [1,2,3,4,5,6,7,8,9,10], appState.completedPuzzles.length, "puzzles", "Finish");
+    pushGenerated("Sprint Sprint", ["🏃", "🔥", "💨", "⚡", "🚀", "🎯", "💠", "📈", "🏆", "🌟"], [5,10,15,20,25,30,35,40,45,50], appState.sprintHighScore || 0, "pts", "Score");
 
 
     achievements.push(
       { emoji: "🔐", name: "Secure Setup", unlocked: appState.sessionLock, description: "Turn on session lock in settings." },
       { emoji: "🔔", name: "Alert Ready", unlocked: appState.loginAlerts, description: "Keep login alerts enabled." },
       { emoji: "💡", name: "Guided Learner", unlocked: appState.lessonHints, description: "Use lesson hints while learning." },
-      { emoji: "🔊", name: "Sound Check", unlocked: appState.soundEffects, description: "Turn on sound effects in settings." },
+
       { emoji: "👤", name: "Profile Keeper", unlocked: Boolean(appState.nickname && appState.email), description: "Add a nickname and email to your profile." },
       { emoji: "🪪", name: "Bio Writer", unlocked: Boolean(appState.bio && appState.bio.trim().length >= 20), description: "Write a bio with at least 20 characters." },
       { emoji: "📡", name: "Live Analyst", unlocked: appState.xp >= 150 && completedLessons >= 3, description: "Build momentum in both XP and lessons." },
-      { emoji: "🧬", name: "All Rounder", unlocked: appState.xp >= 500 && appState.typingBestWpm >= 30 && appState.completedPuzzles.length >= 3, description: "Balance XP, typing, and puzzle progress." },
-      { emoji: "🏁", name: "Momentum Maker", unlocked: appState.xp >= 250 && appState.completedPuzzles.length >= 1, description: "Keep building momentum across learning activities." },
+      { emoji: "🧬", name: "All Rounder", unlocked: appState.xp >= 500 && (appState.sprintHighScore || 0) >= 20, description: "Balance XP and game score." },
 
       { emoji: "💯", name: "Century Board", unlocked: achievements.filter((item) => item.unlocked).length >= 50, description: "Unlock 50 achievements on your way to the top." },
       { emoji: "📈", name: "Progress Watcher", unlocked: appState.xp >= 250 && appState.level >= 2, description: "Reach solid progress across XP and level." },
       { emoji: "🧱", name: "Foundation Strong", unlocked: completedLessons >= 10 && appState.xp >= 400, description: "Pair lesson depth with XP growth." },
-      { emoji: "🎯", name: "Precision Path", unlocked: appState.quizzesTaken >= 3 && appState.typingBestWpm >= 25, description: "Build quiz and typing momentum together." },
+      { emoji: "🎯", name: "Target Locked", unlocked: (appState.sprintHighScore || 0) >= 15 && appState.quizzesTaken >= 3, description: "Combine game score with quiz practice." },
       { emoji: "🧭", name: "Navigator", unlocked: completedLessons >= 12, description: "Keep moving deeper into the lesson path." },
       { emoji: "🪙", name: "Reward Seeker", unlocked: appState.xp >= 750, description: "Push your XP total into the high range." },
-      { emoji: "🕹️", name: "Game Ready", unlocked: appState.completedPuzzles.length >= 2 && appState.typingBestWpm >= 15, description: "Make progress in both games areas." },
+      { emoji: "🕹️", name: "Game Ready", unlocked: (appState.sprintHighScore || 0) >= 10, description: "Score 10 points in any game." },
       { emoji: "🧠", name: "Knowledge Stack", unlocked: completedLessons >= 15 && appState.quizzesTaken >= 5, description: "Strengthen both study and quiz habits." },
       { emoji: "🌠", name: "Sky Climber", unlocked: appState.level >= 6, description: "Rise to level 6." },
-      { emoji: "🏹", name: "Target Locked", unlocked: appState.typingBestWpm >= 50 && appState.quizzesTaken >= 5, description: "Combine speed with steady quiz practice." },
+      { emoji: "🏹", name: "Precision Path", unlocked: (appState.sprintHighScore || 0) >= 30 && appState.level >= 3, description: "Reach high game scores at a solid level." },
       { emoji: "🔷", name: "Polished Profile", unlocked: Boolean(appState.nickname && appState.email && appState.bio && appState.bio.trim().length >= 30), description: "Complete a fuller profile setup." }
     );
 
@@ -3069,8 +3485,7 @@
       darkModeToggle: appState.darkMode,
       sessionLockToggle: appState.sessionLock,
       loginAlertsToggle: appState.loginAlerts,
-      lessonHintsToggle: appState.lessonHints,
-      soundEffectsToggle: appState.soundEffects
+      lessonHintsToggle: appState.lessonHints
     };
 
     Object.entries(ids).forEach(([id, value]) => {
@@ -3079,6 +3494,7 @@
         element.checked = value;
       }
     });
+    syncThemeButton();
   }
 
   function showNotification(message, type = "info") {
@@ -3092,6 +3508,20 @@
     popup.textContent = message;
     container.appendChild(popup);
     setTimeout(() => popup.remove(), 3000);
+  }
+
+  function showXpPopup(amount) {
+    const xpDisplay = document.querySelector(".stat-box p") || document.getElementById("xpDisplay");
+    if (!xpDisplay) return;
+    const rect = xpDisplay.getBoundingClientRect();
+    const el = document.createElement("div");
+    el.className = "xp-popup";
+    el.textContent = `+${amount} XP`;
+    el.style.left = (rect.left + rect.width / 2 - 40) + "px";
+    el.style.top = (rect.top - 10) + "px";
+    document.body.appendChild(el);
+    requestAnimationFrame(() => el.classList.add("active"));
+    setTimeout(() => el.remove(), 1200);
   }
 
   let pendingEmailCode = "";
@@ -3344,11 +3774,33 @@
     const auth = document.getElementById("authContainer");
     const main = document.getElementById("mainInterface");
     if (auth) auth.style.display = "none";
-    if (main) main.style.display = "flex";
+    if (main) {
+      main.style.display = "flex";
+      triggerEntrance(main, "nav-entrance-up");
+    }
     setUiMode("main");
   }
 
+  function triggerEntrance(el, className) {
+    if (!el) return;
+    el.classList.remove(className);
+    void el.offsetWidth;
+    el.classList.add(className);
+  }
+
+  function clearGameTimers() {
+    if (sprintState.timer) {
+      clearInterval(sprintState.timer);
+      sprintState.timer = null;
+    }
+    if (linkUpState.timer) {
+      clearInterval(linkUpState.timer);
+      linkUpState.timer = null;
+    }
+  }
+
   function showPage(pageId) {
+    clearGameTimers();
     const settings = document.getElementById("settings");
     const settingsOverlay = document.getElementById("settingsOverlay");
     if (settings?.classList.contains("open")) {
@@ -3371,8 +3823,9 @@
 
     const page = document.getElementById(pageId);
     if (page) {
-      page.classList.add("active");
       page.style.display = "block";
+      page.classList.add("active");
+      triggerEntrance(page, "nav-entrance-up");
     }
 
     const activeButton = document.querySelector(`.nav-btn[onclick="showPage('${pageId}')"]`);
@@ -3391,8 +3844,8 @@
       triggerPageMasonry(pageId);
     }
 
+    setDrawerOpen(false);
     if (isMobileLayout()) {
-      setDrawerOpen(false);
       const main = document.querySelector(".main");
       if (main) {
         try {
@@ -3437,8 +3890,8 @@
 
     const selectorsByPage = {
       dashboard: [".page-header", ".hero-card", ".hero-progress-ring", ".hero-progress-meta", ".progress-container", ".analytics-panel", ".analytics-card", ".analytics-mini", ".chart-card"],
-      lessons: [".page-header", ".lessons-tabs", ".topic-grid > .topic-card", "#lessonDetail", "#lessonDetailTitle", "#lessonDetailIntro", "#lessonTopicsGrid .topic-card", "#lessonContent", "#lessonContent .lesson-header", "#lessonContent .lesson-body", "#lessonContent .activity-section"],
-      quizzes: [".page-header", "#quizGrid > .quiz-card", "#quizContent", "#quizContent .quiz-header-row", "#quizContent .quiz-intro", "#quizQuestions .quiz-question", "#quizResult"],
+      lessons: [".page-header", ".lessons-tabs", ".topic-grid > .topic-card", "#lessonDetail", "#lessonDetailTitle", "#lessonDetailIntro", "#lessonTopicsGrid .topic-card", "#lessonContent", "#lessonContent .lesson-detail-header", "#lessonContent .lesson-body", "#lessonContent .activity-section"],
+      quizzes: [".page-header", "#quizGrid > .quiz-card", "#quizContent", "#quizContent .lesson-detail-header", "#quizIntro", "#quizQuestions .quiz-question", "#quizResult"],
       achievements: [".page-header", ".achievement-card"]
     };
 
@@ -3487,16 +3940,46 @@
     const unlockedCount = quizzes.filter((quiz) => quiz.unlocked).length;
     badge.textContent = `${unlockedCount}/${quizzes.length} Unlocked`;
 
-    grid.innerHTML = quizzes.map((quiz) => `
-      <article class="topic-card quiz-card ${quiz.unlocked ? "" : "locked"}" data-quiz-id="${quiz.id}">
-        <div>
-          <div class="topic-icon">${quiz.completed ? "✓" : quiz.unlocked ? "Q" : "🔒"}</div>
-          <h4>${quiz.title}</h4>
-          <p>${quiz.unlocked ? quiz.intro : `Complete all topics in ${quiz.lessonTitle} to unlock this quiz.`}</p>
+    const groupOrder = ["html", "js", "css"];
+    const groupLabels = { html: "HTML", js: "JavaScript", css: "CSS" };
+    const groupClasses = { html: "quiz-cat-html", js: "quiz-cat-js", css: "quiz-cat-css" };
+    const grouped = {};
+    quizzes.forEach((quiz) => {
+      const g = quiz.group || "html";
+      if (!grouped[g]) grouped[g] = [];
+      grouped[g].push(quiz);
+    });
+
+    let html = "";
+    groupOrder.forEach((g) => {
+      if (!grouped[g] || grouped[g].length === 0) return;
+      const groupUnlocked = grouped[g].filter((q) => q.unlocked).length;
+      const lessonTitles = [...new Set(grouped[g].map((q) => q.lessonTitle))];
+      html += `
+        <div class="quiz-category">
+          <div class="quiz-category-header">
+            <div class="quiz-category-top">
+              <h3 class="quiz-category-name ${groupClasses[g]}">${groupLabels[g]} Quizzes</h3>
+              <span class="quiz-category-badge">${groupUnlocked}/${grouped[g].length} unlocked</span>
+            </div>
+            <p class="quiz-category-lessons">Related lessons: ${lessonTitles.join(", ")}</p>
+          </div>
+          <div class="quiz-category-grid">
+            ${grouped[g].map((quiz) => `
+              <article class="topic-card quiz-card ${quiz.unlocked ? "" : "locked"}" data-quiz-id="${quiz.id}">
+                <div>
+                  <div class="topic-icon">${quiz.completed ? "✓" : quiz.unlocked ? "Q" : "🔒"}</div>
+                  <h4>${quiz.title}</h4>
+                  <p>${quiz.unlocked ? quiz.intro : `Complete all topics in ${quiz.lessonTitle} to unlock this quiz.`}</p>
+                </div>
+                <span class="topic-xp">${quiz.completed ? "Completed" : quiz.unlocked ? `${quiz.questionCount} Questions` : "Locked"}</span>
+              </article>
+            `).join("")}
+          </div>
         </div>
-        <span class="topic-xp">${quiz.completed ? "Completed" : quiz.unlocked ? `${quiz.questionCount} Questions` : "Locked"}</span>
-      </article>
-    `).join("");
+      `;
+    });
+    grid.innerHTML = html;
 
     grid.querySelectorAll(".quiz-card").forEach((card) => {
       card.addEventListener("click", () => {
@@ -3517,7 +4000,9 @@
 
     currentQuiz = quiz;
     document.getElementById("quizGrid").style.display = "none";
-    document.getElementById("quizContent").style.display = "block";
+    const quizContent = document.getElementById("quizContent");
+    quizContent.style.display = "block";
+    triggerEntrance(quizContent, "nav-entrance-up");
     document.getElementById("quizTitle").textContent = quiz.title;
     document.getElementById("quizBadge").textContent = quiz.completed ? "Completed" : quiz.difficulty;
     document.getElementById("quizIntro").textContent = quiz.intro;
@@ -3532,7 +4017,7 @@
           ${question.options.map((option, optionIndex) => `
             <label class="quiz-option">
               <input type="radio" name="quiz-question-${index}" value="${escapeHtml(option)}">
-              <span>${option}</span>
+              <span>${escapeHtml(option)}</span>
             </label>
           `).join("")}
         </div>
@@ -3571,6 +4056,8 @@
         appState.completedQuizzes.push(currentQuiz.id);
         appState.quizzesTaken += 1;
         appState.xp += 40;
+        logXpEarned(40);
+        showXpPopup(40);
       }
       updateDashboard();
       result.textContent = `Quiz passed. Score: ${score}/${currentQuiz.questions.length}. You earned +40 XP.`;
@@ -3586,12 +4073,43 @@
   function goBackToQuizzes() {
     currentQuiz = null;
     document.getElementById("quizContent").style.display = "none";
-    document.getElementById("quizGrid").style.display = "grid";
+    const grid = document.getElementById("quizGrid");
+    grid.style.display = "grid";
     renderQuizzes();
+    if (grid && grid.children.length) {
+      triggerEntrance(grid, "nav-stagger");
+    }
+  }
+
+  let currentDifficultyFilter = "all";
+  let currentLessonSearch = "";
+
+  function setDifficultyFilter(filter) {
+    currentDifficultyFilter = filter;
+    document.querySelectorAll(".filter-btn").forEach(btn => {
+      btn.classList.toggle("active", btn.dataset.filter === filter);
+    });
+    renderLessons();
+  }
+
+  function setLessonSearch(value) {
+    currentLessonSearch = value.toLowerCase().trim();
+    renderLessons();
+  }
+
+  function filterLessonsByDifficulty(lessons) {
+    let filtered = lessons;
+    if (currentDifficultyFilter !== "all") {
+      filtered = filtered.filter(l => l.difficulty === currentDifficultyFilter);
+    }
+    if (currentLessonSearch) {
+      filtered = filtered.filter(l => l.title.toLowerCase().includes(currentLessonSearch));
+    }
+    return filtered;
   }
 
   function renderLessons() {
-    const lessons = getLessonData();
+    const lessons = filterLessonsByDifficulty(getLessonData());
     const grid = document.getElementById("topicGrid");
     if (!grid) {
       return;
@@ -3599,12 +4117,17 @@
 
     grid.innerHTML = lessons.map((lesson) => `
       <article class="topic-card lesson-card" data-lesson-id="${lesson.id}">
-        <div class="topic-icon">${lesson.difficulty === "Intermediate" ? "I" : "B"}</div>
+        <div class="topic-icon">${lesson.difficulty === "Advanced" ? "A" : lesson.difficulty === "Intermediate" ? "I" : "B"}</div>
         <h4>${lesson.title}</h4>
         <p>${lesson.intro}</p>
         <span class="topic-xp">${lesson.topics.length} topics</span>
       </article>
     `).join("");
+
+    const emptyState = document.getElementById("emptyState");
+    if (emptyState) {
+      emptyState.style.display = lessons.length === 0 ? "block" : "none";
+    }
 
     grid.querySelectorAll(".lesson-card").forEach((card) => {
       card.addEventListener("click", () => {
@@ -3617,10 +4140,11 @@
     });
 
     renderJSLessons();
+    renderCSSLessons();
   }
 
   function renderJSLessons() {
-    const jsLessons = getJSLessonData();
+    const jsLessons = filterLessonsByDifficulty(getJSLessonData());
     const grid = document.getElementById("topicGridJS");
     if (!grid) {
       return;
@@ -3646,21 +4170,50 @@
     });
   }
 
+  function renderCSSLessons() {
+    const cssLessons = filterLessonsByDifficulty(getCSSLessonData());
+    const grid = document.getElementById("topicGridCSS");
+    if (!grid) {
+      return;
+    }
+
+    grid.innerHTML = cssLessons.map((lesson) => `
+      <article class="topic-card lesson-card" data-lesson-id="${lesson.id}" data-is-css="true">
+        <div class="topic-icon">${lesson.difficulty === "Advanced" ? "A" : lesson.difficulty === "Intermediate" ? "I" : "B"}</div>
+        <h4>${lesson.title}</h4>
+        <p>${lesson.intro}</p>
+        <span class="topic-xp">${lesson.topics.length} topics</span>
+      </article>
+    `).join("");
+
+    grid.querySelectorAll(".lesson-card").forEach((card) => {
+      card.addEventListener("click", () => {
+        const lessonId = Number(card.dataset.lessonId);
+        const lesson = cssLessons.find((item) => item.id === lessonId);
+        if (lesson) {
+          loadLessonDetail(lesson);
+        }
+      });
+    });
+  }
+
   function loadLessonDetail(lesson) {
     currentLessonGroup = lesson;
     document.querySelector(".lessons-tabs").style.display = "none";
     document.getElementById("topicGrid").style.display = "none";
     document.getElementById("topicGridJS").style.display = "none";
+    document.getElementById("topicGridCSS").style.display = "none";
     document.getElementById("lessonContent").style.display = "none";
-    document.getElementById("lessonDetail").style.display = "block";
+    const detailView = document.getElementById("lessonDetail");
+    detailView.style.display = "block";
+    triggerEntrance(detailView, "nav-entrance-up");
     document.getElementById("lessonDetailTitle").textContent = lesson.title;
-    document.getElementById("lessonDetailBadge").textContent = lesson.difficulty;
     document.getElementById("lessonDetailIntro").textContent = lesson.intro;
 
     const grid = document.getElementById("lessonTopicsGrid");
 
     const completedCount = lesson.topics.filter((t) => appState.completedLessons.includes(t.id)).length;
-    document.getElementById("lessonDetailBadge").textContent = `${completedCount}/${lesson.topics.length} Topics Completed`;
+    document.getElementById("lessonDetailBadge").textContent = `${lesson.difficulty} · ${completedCount}/${lesson.topics.length} Topics`;
 
     grid.innerHTML = lesson.topics.map((topic) => {
       const done = appState.completedLessons.includes(topic.id);
@@ -3676,6 +4229,8 @@
       `;
     }).join("");
 
+    triggerEntrance(grid, "nav-stagger");
+
     grid.querySelectorAll(".topic-card").forEach((card) => {
       card.addEventListener("click", () => {
         const topicId = Number(card.dataset.topicId);
@@ -3690,7 +4245,9 @@
   function loadLessonContent(topic) {
     currentTopic = topic;
     document.getElementById("lessonDetail").style.display = "none";
-    document.getElementById("lessonContent").style.display = "block";
+    const contentView = document.getElementById("lessonContent");
+    contentView.style.display = "block";
+    triggerEntrance(contentView, "nav-entrance-up");
 
     document.getElementById("lessonTitle").textContent = topic.title;
     document.getElementById("lessonBadge").textContent = topic.difficulty;
@@ -3701,8 +4258,32 @@
 
     document.getElementById("lessonCode").innerHTML = `<pre class="code-block"><code>${escapeHtml(topic.code)}</code></pre>`;
     document.getElementById("activityPrompt").textContent = topic.activityPrompt;
-    document.getElementById("activityCode").value = topic.activityStarter;
-    document.getElementById("activityOutput").srcdoc = topic.activityStarter;
+    const savedCode = localStorage.getItem(`codelab_code_${topic.id}`);
+
+    const textarea = document.getElementById("activityCode");
+    textarea.style.display = "none";
+
+    if (cmEditor) {
+      cmEditor.toTextArea();
+      cmEditor = null;
+    }
+
+    const mode = topic.id < 100 ? "xml" : topic.id >= 200 ? "css" : "javascript";
+    cmEditor = CodeMirror.fromTextArea(textarea, {
+      mode: mode,
+      theme: "material-darker",
+      lineNumbers: true,
+      indentUnit: 2,
+      tabSize: 2,
+      lineWrapping: true,
+      value: savedCode || ""
+    });
+    cmEditor.setValue(savedCode || "");
+    cmEditor.on("change", () => {
+      localStorage.setItem(`codelab_code_${topic.id}`, cmEditor.getValue());
+    });
+
+    document.getElementById("activityOutput").srcdoc = savedCode || "";
     document.getElementById("activityHint").textContent = topic.activityHint;
     document.getElementById("activityHint").style.display = "none";
     document.getElementById("activityResult").textContent = "";
@@ -3712,7 +4293,46 @@
   }
 
   function runActivity() {
-    document.getElementById("activityOutput").srcdoc = document.getElementById("activityCode").value;
+    const code = cmEditor ? cmEditor.getValue() : document.getElementById("activityCode").value;
+    const consoleEl = document.getElementById("activityConsole");
+    const consoleBody = consoleEl?.querySelector(".console-body");
+    if (consoleBody) {
+      consoleBody.innerHTML = "";
+    }
+    if (consoleEl) {
+      consoleEl.style.display = "block";
+    }
+
+    const wrapped = `<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><script>
+(function() {
+  const origLog = console.log;
+  const origError = console.error;
+  const origWarn = console.warn;
+  const logs = [];
+  console.log = function(...args) {
+    logs.push(args.map(a => typeof a === "object" ? JSON.stringify(a, null, 2) : String(a)).join(" "));
+    parent.postMessage({ type: "console", data: logs[logs.length - 1] }, "*");
+  };
+  console.error = function(...args) {
+    logs.push("Error: " + args.map(a => typeof a === "object" ? JSON.stringify(a, null, 2) : String(a)).join(" "));
+    parent.postMessage({ type: "console", data: logs[logs.length - 1] }, "*");
+  };
+  console.warn = function(...args) {
+    logs.push("Warn: " + args.map(a => typeof a === "object" ? JSON.stringify(a, null, 2) : String(a)).join(" "));
+    parent.postMessage({ type: "console", data: logs[logs.length - 1] }, "*");
+  };
+  window.onerror = function(msg) {
+    parent.postMessage({ type: "console", data: "Error: " + msg }, "*");
+  };
+})();
+<\/script>
+</head>
+<body>${code}</body>
+</html>`;
+
+    document.getElementById("activityOutput").srcdoc = wrapped;
   }
 
   function checkActivity() {
@@ -3720,9 +4340,10 @@
       return;
     }
 
-    const code = document.getElementById("activityCode").value;
+    const code = cmEditor ? cmEditor.getValue() : document.getElementById("activityCode").value;
     const result = document.getElementById("activityResult");
-    const isCorrect = typeof currentTopic.validateActivity === "function" && currentTopic.validateActivity(code);
+    const validation = typeof currentTopic.validateActivity === "function" ? currentTopic.validateActivity(code) : true;
+    const isCorrect = validation === true;
 
     if (isCorrect) {
       result.textContent = "Correct answer. You can now complete the lesson.";
@@ -3730,7 +4351,13 @@
       document.getElementById("completeLessonBtn").style.display = "inline-flex";
       document.getElementById("checkActivityBtn").style.display = "none";
     } else {
-      result.textContent = "That still needs a small fix. Check the hint and try again.";
+      if (typeof validation === "string") {
+        result.textContent = validation;
+      } else if (!code.trim()) {
+        result.textContent = "Your code is empty. Try writing the answer based on the steps and example above.";
+      } else {
+        result.textContent = "Almost there! Check the code example and steps — something is missing or needs fixing.";
+      }
       result.className = "activity-result error";
       if (appState.lessonHints) {
         document.getElementById("activityHint").style.display = "block";
@@ -3746,14 +4373,15 @@
     }
 
 
-    const code = document.getElementById("activityCode")?.value ?? "";
+    const code = cmEditor ? cmEditor.getValue() : document.getElementById("activityCode")?.value ?? "";
     const requiresValidation = typeof currentTopic.validateActivity === "function";
-    const isCorrect = !requiresValidation || currentTopic.validateActivity(code);
+    const validation = requiresValidation ? currentTopic.validateActivity(code) : true;
+    const isCorrect = validation === true;
 
     if (!isCorrect) {
       const result = document.getElementById("activityResult");
       if (result) {
-        result.textContent = "Finish the activity first (click Check Answer) before completing the lesson.";
+        result.textContent = typeof validation === "string" ? validation : "Finish the activity first (click Check Answer) before completing the lesson.";
         result.className = "activity-result error";
       }
       if (appState.lessonHints) {
@@ -3767,11 +4395,12 @@
     const alreadyCompleted = appState.completedLessons.includes(currentTopic.id);
     if (!alreadyCompleted) {
       appState.completedLessons.push(currentTopic.id);
+      appState.lessonsDone += 1;
       appState.xp += currentTopic.xp;
+      logXpEarned(currentTopic.xp);
+      showXpPopup(currentTopic.xp);
     }
-
-    // Lessons/Quizzes removed; keep progress stable.
-    appState.lessonsDone = 0;
+    localStorage.removeItem(`codelab_code_${currentTopic.id}`);
     updateDashboard();
     renderQuizzes();
 
@@ -3792,6 +4421,11 @@
   }
 
   function goBackToTopics() {
+    if (cmEditor) {
+      cmEditor.toTextArea();
+      cmEditor = null;
+      document.getElementById("activityCode").style.display = "none";
+    }
     // Return from a topic (lessonContent) back to the list of topics/quizzes for that lesson group.
     document.getElementById("lessonContent").style.display = "none";
     if (currentLessonGroup) {
@@ -3807,6 +4441,12 @@
     });
     document.getElementById("topicGrid").style.display = tab === "html" ? "grid" : "none";
     document.getElementById("topicGridJS").style.display = tab === "js" ? "grid" : "none";
+    document.getElementById("topicGridCSS").style.display = tab === "css" ? "grid" : "none";
+    const gridId = tab === "html" ? "topicGrid" : tab === "js" ? "topicGridJS" : "topicGridCSS";
+    const grid = document.getElementById(gridId);
+    if (grid && grid.children.length) {
+      triggerEntrance(grid, "nav-stagger");
+    }
   }
 
   function toggleSettings() {
@@ -3839,8 +4479,18 @@
     appState.darkMode = !appState.darkMode;
     document.body.classList.toggle("dark", appState.darkMode);
     document.body.classList.toggle("light", !appState.darkMode);
+    syncThemeButton();
     syncSettingsUI();
     saveState();
+  }
+
+  function syncThemeButton() {
+    const icon = document.getElementById("themeIcon");
+    const label = document.getElementById("themeLabel");
+    if (icon && label) {
+      icon.textContent = appState.darkMode ? "🌙" : "☀️";
+      label.textContent = appState.darkMode ? "Dark" : "Light";
+    }
   }
 
   function toggleSetting(settingName) {
@@ -3855,8 +4505,7 @@
     const labels = {
       sessionLock: "Session lock",
       loginAlerts: "Login alerts",
-      lessonHints: "Lesson hints",
-      soundEffects: "Sound effects"
+      lessonHints: "Lesson hints"
     };
 
     showNotification(`${labels[settingName] || "Setting"} ${appState[settingName] ? "enabled" : "disabled"}`, "info");
@@ -4050,769 +4699,849 @@
   }
 
   function showGamesMode(mode) {
-    document.querySelectorAll(".games-tabs .editor-tab").forEach((button) => button.classList.remove("active"));
-    document.querySelectorAll(".game-section").forEach((section) => section.classList.remove("active"));
-    document.querySelector(`.games-tabs .editor-tab[onclick="showGamesMode('${mode}')"]`)?.classList.add("active");
-    document.getElementById(`games${mode.charAt(0).toUpperCase()}${mode.slice(1)}`)?.classList.add("active");
+    document.querySelectorAll(".games-tabs .editor-tab").forEach((b) => b.classList.remove("active"));
+    document.querySelectorAll(".game-section").forEach((s) => s.classList.remove("active"));
+    document.querySelector(`.games-tabs .editor-tab[onclick*="'${mode}'"]`)?.classList.add("active");
+    const el = document.getElementById(`games${mode.charAt(0).toUpperCase()}${mode.slice(1)}`);
+    if (el) el.classList.add("active");
   }
 
   function playCorrectChime() {
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
-    if (!AudioCtx) {
-      return;
-    }
-
-    if (!audioContext) {
-      audioContext = new AudioCtx();
-    }
-
-    if (audioContext.state === "suspended") {
-      audioContext.resume().catch(() => {});
-    }
-
+    if (!AudioCtx) return;
+    if (!audioContext) audioContext = new AudioCtx();
+    if (audioContext.state === "suspended") audioContext.resume().catch(() => {});
     const now = audioContext.currentTime;
-    const masterGain = audioContext.createGain();
-    masterGain.gain.setValueAtTime(0.0001, now);
-    masterGain.gain.exponentialRampToValueAtTime(0.12, now + 0.02);
-    masterGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.42);
-    masterGain.connect(audioContext.destination);
-
+    const mg = audioContext.createGain();
+    mg.gain.setValueAtTime(0.0001, now);
+    mg.gain.exponentialRampToValueAtTime(0.12, now + 0.02);
+    mg.gain.exponentialRampToValueAtTime(0.0001, now + 0.42);
+    mg.connect(audioContext.destination);
     const lead = audioContext.createOscillator();
     lead.type = "sine";
     lead.frequency.setValueAtTime(880, now);
     lead.frequency.exponentialRampToValueAtTime(1320, now + 0.16);
-    lead.connect(masterGain);
+    lead.connect(mg);
     lead.start(now);
     lead.stop(now + 0.22);
-
     const sparkle = audioContext.createOscillator();
     sparkle.type = "triangle";
     sparkle.frequency.setValueAtTime(1760, now + 0.06);
     sparkle.frequency.exponentialRampToValueAtTime(2200, now + 0.24);
-    sparkle.connect(masterGain);
+    sparkle.connect(mg);
     sparkle.start(now + 0.06);
     sparkle.stop(now + 0.28);
   }
 
   function playWrongBuzz() {
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
-    if (!AudioCtx) {
-      return;
-    }
-
-    if (!audioContext) {
-      audioContext = new AudioCtx();
-    }
-
-    if (audioContext.state === "suspended") {
-      audioContext.resume().catch(() => {});
-    }
-
+    if (!AudioCtx) return;
+    if (!audioContext) audioContext = new AudioCtx();
+    if (audioContext.state === "suspended") audioContext.resume().catch(() => {});
     const now = audioContext.currentTime;
-    const masterGain = audioContext.createGain();
-    masterGain.gain.setValueAtTime(0.0001, now);
-    masterGain.gain.exponentialRampToValueAtTime(0.14, now + 0.02);
-    masterGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.28);
-    masterGain.connect(audioContext.destination);
-
+    const mg = audioContext.createGain();
+    mg.gain.setValueAtTime(0.0001, now);
+    mg.gain.exponentialRampToValueAtTime(0.14, now + 0.02);
+    mg.gain.exponentialRampToValueAtTime(0.0001, now + 0.28);
+    mg.connect(audioContext.destination);
     const osc = audioContext.createOscillator();
     osc.type = "sawtooth";
     osc.frequency.setValueAtTime(140, now);
     osc.frequency.exponentialRampToValueAtTime(90, now + 0.18);
-    osc.connect(masterGain);
+    osc.connect(mg);
     osc.start(now);
     osc.stop(now + 0.22);
   }
 
-  function updateRushStats() {
-    const level = Math.max(1, Math.floor(rushScore / 120) + 1);
-    document.getElementById("rushScore").textContent = rushScore;
-    document.getElementById("rushStreak").textContent = rushStreak;
-    document.getElementById("rushLevel").textContent = level;
-    document.getElementById("rushTime").textContent = `${rushTimeLeft}s`;
+  function shuffleArray(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
   }
 
-  function formatRushDurationLabel(seconds) {
-    return seconds < 60 ? `${seconds}s` : `${Math.round(seconds / 60)}m`;
+  function makeQuestion(cat, diff, text, correct, wrong, code = "") {
+    const opts = shuffleArray([correct, ...wrong]);
+    return { category: cat, difficulty: diff, question: text, code, options: opts, answer: opts.indexOf(correct) };
   }
 
-  function refreshRushStartButtonLabel() {
-    const startButton = document.getElementById("rushStartBtn");
-    if (!startButton) {
+  function makeBugQuestion(cat, diff, code, buggyLine, fixLabel, correctFix, wrongFixes, explanation) {
+    const opts = shuffleArray([correctFix, ...wrongFixes]);
+    return { category: cat, difficulty: diff, code, buggyLine, fixLabel, options: opts, answer: opts.indexOf(correctFix), explanation };
+  }
+
+  const sprintTemplates = [
+    // HTML - Beginner
+    { cat: "html", diff: "beginner", q: "Which tag creates the largest heading?", c: "&lt;h1&gt;", w: ["&lt;h6&gt;", "&lt;heading&gt;", "&lt;head&gt;"] },
+    { cat: "html", diff: "beginner", q: "Which tag creates a paragraph?", c: "&lt;p&gt;", w: ["&lt;para&gt;", "&lt;text&gt;", "&lt;div&gt;"] },
+    { cat: "html", diff: "beginner", q: "Which tag creates a hyperlink?", c: "&lt;a&gt;", w: ["&lt;link&gt;", "&lt;href&gt;", "&lt;nav&gt;"] },
+    { cat: "html", diff: "beginner", q: "Which tag displays an image?", c: "&lt;img&gt;", w: ["&lt;image&gt;", "&lt;pic&gt;", "&lt;src&gt;"] },
+    { cat: "html", diff: "beginner", q: "Which tag is the root element of an HTML document?", c: "&lt;html&gt;", w: ["&lt;body&gt;", "&lt;head&gt;", "&lt;root&gt;"] },
+    { cat: "html", diff: "beginner", q: "Which tag defines a line break?", c: "&lt;br&gt;", w: ["&lt;hr&gt;", "&lt;lb&gt;", "&lt;break&gt;"] },
+    { cat: "html", diff: "beginner", q: "Which tag creates a horizontal rule?", c: "&lt;hr&gt;", w: ["&lt;br&gt;", "&lt;line&gt;", "&lt;rule&gt;"] },
+    { cat: "html", diff: "beginner", q: "Which tag is used for bold text?", c: "&lt;strong&gt;", w: ["&lt;bold&gt;", "&lt;b&gt;", "&lt;em&gt;"] },
+    { cat: "html", diff: "beginner", q: "Which tag creates an unordered list?", c: "&lt;ul&gt;", w: ["&lt;ol&gt;", "&lt;li&gt;", "&lt;list&gt;"] },
+    { cat: "html", diff: "beginner", q: "Which tag creates a list item?", c: "&lt;li&gt;", w: ["&lt;ul&gt;", "&lt;ol&gt;", "&lt;item&gt;"] },
+    // HTML - Intermediate
+    { cat: "html", diff: "intermediate", q: "Which semantic tag represents navigation links?", c: "&lt;nav&gt;", w: ["&lt;menu&gt;", "&lt;links&gt;", "&lt;aside&gt;"] },
+    { cat: "html", diff: "intermediate", q: "Which tag is used for an unordered list?", c: "&lt;ul&gt;", w: ["&lt;ol&gt;", "&lt;li&gt;", "&lt;list&gt;"] },
+    { cat: "html", diff: "intermediate", q: "Which attribute specifies the URL for a link?", c: "href", w: ["src", "link", "url"], code: "&lt;a ________=\"https://...\"&gt;click&lt;/a&gt;" },
+    { cat: "html", diff: "intermediate", q: "Which element creates a drop-down list?", c: "&lt;select&gt;", w: ["&lt;dropdown&gt;", "&lt;list&gt;", "&lt;input&gt;"] },
+    { cat: "html", diff: "intermediate", q: "Which tag adds a line break?", c: "&lt;br&gt;", w: ["&lt;hr&gt;", "&lt;lb&gt;", "&lt;break&gt;"] },
+    { cat: "html", diff: "intermediate", q: "Which attribute links a label to an input?", c: "for", w: ["id", "name", "target"] },
+    { cat: "html", diff: "intermediate", q: "Which element is used for a checkbox?", c: "&lt;input type=\"checkbox\"&gt;", w: ["&lt;checkbox&gt;", "&lt;input type=\"radio\"&gt;", "&lt;check&gt;"] },
+    { cat: "html", diff: "intermediate", q: "Which tag defines a table row?", c: "&lt;tr&gt;", w: ["&lt;td&gt;", "&lt;th&gt;", "&lt;row&gt;"] },
+    { cat: "html", diff: "intermediate", q: "Which tag defines a table header cell?", c: "&lt;th&gt;", w: ["&lt;td&gt;", "&lt;tr&gt;", "&lt;thead&gt;"] },
+    { cat: "html", diff: "intermediate", q: "Which attribute sets the image source?", c: "src", w: ["href", "alt", "link"] },
+    // HTML - Advanced
+    { cat: "html", diff: "advanced", q: "Which ARIA attribute hides an element from screen readers?", c: "aria-hidden", w: ["aria-label", "role", "tabindex"] },
+    { cat: "html", diff: "advanced", q: "Which element embeds external content like a page?", c: "&lt;iframe&gt;", w: ["&lt;embed&gt;", "&lt;object&gt;", "&lt;portal&gt;"] },
+    { cat: "html", diff: "advanced", q: "Which tag represents self-contained content like a blog post?", c: "&lt;article&gt;", w: ["&lt;section&gt;", "&lt;div&gt;", "&lt;main&gt;"] },
+    { cat: "html", diff: "advanced", q: "Which input type shows a calendar picker?", c: "date", w: ["calendar", "time", "datetime"] },
+    { cat: "html", diff: "advanced", q: "Which tag defines a caption for a figure?", c: "&lt;figcaption&gt;", w: ["&lt;caption&gt;", "&lt;legend&gt;", "&lt;label&gt;"] },
+    { cat: "html", diff: "advanced", q: "Which attribute enables drag-and-drop?", c: "draggable", w: ["drag", "drop", "movable"] },
+    { cat: "html", diff: "advanced", q: "Which element represents a progress bar?", c: "&lt;progress&gt;", w: ["&lt;meter&gt;", "&lt;bar&gt;", "&lt;status&gt;"] },
+    { cat: "html", diff: "advanced", q: "Which attribute makes an input required?", c: "required", w: ["mandatory", "must", "validate"] },
+    { cat: "html", diff: "advanced", q: "Which element specifies a media source for video/audio?", c: "&lt;source&gt;", w: ["&lt;src&gt;", "&lt;media&gt;", "&lt;track&gt;"] },
+    { cat: "html", diff: "advanced", q: "Which attribute opens a link in a new tab?", c: "target=\"_blank\"", w: ["target=\"_new\"", "href=\"_blank\"", "rel=\"external\""] },
+    // CSS - Beginner
+    { cat: "css", diff: "beginner", q: "Which property changes text color?", c: "color", w: ["font-color", "text-color", "foreground"] },
+    { cat: "css", diff: "beginner", q: "Which property sets text size?", c: "font-size", w: ["text-size", "size", "font-height"] },
+    { cat: "css", diff: "beginner", q: "Which value makes text bold?", c: "bold", w: ["strong", "bolder", "heavy"] },
+    { cat: "css", diff: "beginner", q: "Which property adds space inside an element?", c: "padding", w: ["margin", "gap", "spacing"] },
+    { cat: "css", diff: "beginner", q: "Which property adds space outside an element?", c: "margin", w: ["padding", "border", "gap"] },
+    { cat: "css", diff: "beginner", q: "Which property sets background color?", c: "background-color", w: ["color", "bg-color", "fill"] },
+    { cat: "css", diff: "beginner", q: "Which property sets element width?", c: "width", w: ["size", "max-width", "span"] },
+    { cat: "css", diff: "beginner", q: "Which property sets element height?", c: "height", w: ["size", "min-height", "length"] },
+    { cat: "css", diff: "beginner", q: "Which unit is relative to the parent font-size?", c: "em", w: ["px", "rem", "%"] },
+    { cat: "css", diff: "beginner", q: "Which property hides an element but keeps its space?", c: "visibility: hidden", w: ["display: none", "opacity: 0", "hidden"] },
+    // CSS - Intermediate
+    { cat: "css", diff: "intermediate", q: "Which display value creates a flex container?", c: "flex", w: ["block", "inline", "grid"] },
+    { cat: "css", diff: "intermediate", q: "Which property centers a flex child vertically?", c: "align-items", w: ["justify-content", "text-align", "vertical-align"] },
+    { cat: "css", diff: "intermediate", q: "Which property makes corners round?", c: "border-radius", w: ["corner-radius", "round", "border-style"] },
+    { cat: "css", diff: "intermediate", q: "Which position value removes element from normal flow?", c: "absolute", w: ["relative", "fixed", "static"] },
+    { cat: "css", diff: "intermediate", q: "Which layout mode is best for a two-dimensional grid?", c: "grid", w: ["flexbox", "table", "inline-block"] },
+    { cat: "css", diff: "intermediate", q: "Which property centers a flex child horizontally?", c: "justify-content", w: ["align-items", "text-align", "margin"] },
+    { cat: "css", diff: "intermediate", q: "Which property adds space between flex/grid items?", c: "gap", w: ["spacing", "margin", "padding"] },
+    { cat: "css", diff: "intermediate", q: "Which property sets the font?", c: "font-family", w: ["font-style", "font-face", "typeface"] },
+    { cat: "css", diff: "intermediate", q: "Which property underlines text?", c: "text-decoration: underline", w: ["font-style: underline", "border-bottom", "underline"] },
+    { cat: "css", diff: "intermediate", q: "Which pseudo-class targets a hovered element?", c: ":hover", w: [":active", ":focus", ":target"] },
+    // CSS - Advanced
+    { cat: "css", diff: "advanced", q: "Which at-rule creates responsive breakpoints?", c: "@media", w: ["@import", "@font-face", "@keyframes"] },
+    { cat: "css", diff: "advanced", q: "Which function creates animations?", c: "@keyframes", w: ["@animate", "animation()", "transition()"] },
+    { cat: "css", diff: "advanced", q: "Which property stacks elements on the z-axis?", c: "z-index", w: ["stack-order", "z-order", "layer"] },
+    { cat: "css", diff: "advanced", q: "Which pseudo-class targets the first child?", c: ":first-child", w: [":first", ":nth(1)", ":first-of-type"] },
+    { cat: "css", diff: "advanced", q: "Which function calculates a value dynamically?", c: "calc()", w: ["compute()", "math()", "eval()"] },
+    { cat: "css", diff: "advanced", q: "Which property creates a CSS animation?", c: "animation", w: ["transition", "transform", "move"] },
+    { cat: "css", diff: "advanced", q: "Which value of position sticks on scroll?", c: "sticky", w: ["fixed", "absolute", "relative"] },
+    { cat: "css", diff: "advanced", q: "Which filter property blurs an element?", c: "blur()", w: ["opacity()", "saturate()", "brightness()"] },
+    { cat: "css", diff: "advanced", q: "Which pseudo-element selects the first line?", c: "::first-line", w: [":first-line", "::first-letter", ":before"] },
+    { cat: "css", diff: "advanced", q: "Which function repeats grid tracks?", c: "repeat()", w: ["auto-fill", "minmax()", "grid-track()"] },
+    // JS - Beginner
+    { cat: "js", diff: "beginner", q: "Which keyword declares a block-scoped variable?", c: "let", w: ["var", "const", "int"] },
+    { cat: "js", diff: "beginner", q: "Which method prints to the console?", c: "console.log()", w: ["print()", "log()", "echo()"] },
+    { cat: "js", diff: "beginner", q: "Which data type is true or false?", c: "boolean", w: ["string", "number", "null"] },
+    { cat: "js", diff: "beginner", q: "Which operator checks strict equality?", c: "===", w: ["==", "=", "!="] },
+    { cat: "js", diff: "beginner", q: "Which keyword defines a function?", c: "function", w: ["def", "fn", "func"] },
+    { cat: "js", diff: "beginner", q: "Which symbol creates a single-line comment?", c: "//", w: ["/*", "#", "--"] },
+    { cat: "js", diff: "beginner", q: "Which data type represents a whole number?", c: "number", w: ["int", "integer", "float"] },
+    { cat: "js", diff: "beginner", q: "Which keyword declares a constant?", c: "const", w: ["let", "var", "final"] },
+    { cat: "js", diff: "beginner", q: "Which value represents nothing?", c: "null", w: ["undefined", "NaN", "0"] },
+    { cat: "js", diff: "beginner", q: "Which operator adds two numbers?", c: "+", w: ["&", "++", "="] },
+    // JS - Intermediate
+    { cat: "js", diff: "intermediate", q: "Which method adds an element to the end of an array?", c: "push()", w: ["pop()", "shift()", "unshift()"] },
+    { cat: "js", diff: "intermediate", q: "Which loop runs at least once?", c: "do...while", w: ["while", "for", "for...in"] },
+    { cat: "js", diff: "intermediate", q: "Which method transforms every element in an array?", c: "map()", w: ["filter()", "reduce()", "forEach()"] },
+    { cat: "js", diff: "intermediate", q: "Which object holds URL query parameters?", c: "URLSearchParams", w: ["URL", "QueryString", "Location"] },
+    { cat: "js", diff: "intermediate", q: "Which syntax creates an arrow function?", c: "() =>", w: ["function()", "=>()", "def() =>"] },
+    { cat: "js", diff: "intermediate", q: "Which method removes the last element from an array?", c: "pop()", w: ["push()", "shift()", "slice()"] },
+    { cat: "js", diff: "intermediate", q: "Which method checks if an array includes a value?", c: "includes()", w: ["contains()", "has()", "indexOf()"] },
+    { cat: "js", diff: "intermediate", q: "Which statement handles errors?", c: "try...catch", w: ["if...else", "error()", "throw...catch"] },
+    { cat: "js", diff: "intermediate", q: "Which method creates a new array with filtered elements?", c: "filter()", w: ["map()", "reduce()", "find()"] },
+    { cat: "js", diff: "intermediate", q: "Which operator spreads an array?", c: "...", w: ["..", "**", "&"] },
+    // JS - Advanced
+    { cat: "js", diff: "advanced", q: "Which API handles HTTP requests natively?", c: "fetch()", w: ["XMLHttpRequest", "http.get()", "request()"] },
+    { cat: "js", diff: "advanced", q: "Which keyword handles asynchronous operations?", c: "async", w: ["await", "promise", "yield"] },
+    { cat: "js", diff: "advanced", q: "Which method creates a new Promise?", c: "new Promise()", w: ["Promise.create()", "Promise.new()", "new Async()"] },
+    { cat: "js", diff: "advanced", q: "Which object provides browser storage?", c: "localStorage", w: ["cookieStore", "cache", "storage"] },
+    { cat: "js", diff: "advanced", q: "Which method parses a JSON string?", c: "JSON.parse()", w: ["JSON.stringify()", "JSON.decode()", "parseJSON()"] },
+    { cat: "js", diff: "advanced", q: "Which method converts an object to JSON?", c: "JSON.stringify()", w: ["JSON.parse()", "JSON.encode()", "toJSON()"] },
+    { cat: "js", diff: "advanced", q: "Which pattern handles async code without callbacks?", c: "Promise", w: ["async", "callback", "observer"] },
+    { cat: "js", diff: "advanced", q: "Which method stops event propagation?", c: "stopPropagation()", w: ["preventDefault()", "stop()", "cancelBubble"] },
+    { cat: "js", diff: "advanced", q: "Which object represents the browser window?", c: "window", w: ["document", "global", "self"] },
+    { cat: "js", diff: "advanced", q: "Which method runs a function after a delay?", c: "setTimeout()", w: ["setInterval()", "delay()", "wait()"] },
+  ];
+
+  function generateSprintQuestions(category, difficulty, count = 30) {
+    let pool = [...sprintTemplates];
+    if (category !== "all") pool = pool.filter((t) => t.cat === category);
+    if (difficulty !== "all") pool = pool.filter((t) => t.diff === difficulty);
+    shuffleArray(pool);
+    const selected = pool.slice(0, Math.min(count, pool.length));
+    return selected.map((t) => makeQuestion(t.cat, t.diff, t.q, t.c, t.w, t.code || ""));
+  }
+
+  function renderSprintIntro() {
+    const area = document.getElementById("sprintArea");
+    area.innerHTML = `\
+<div class="sprint-setup">
+  <h5>Code Sprint</h5>
+  <p>Answer as many HTML, CSS, and JS questions as you can before losing all 3 lives. Build streaks for bonus points!</p>
+  <div class="game-config">
+    <label>Category
+      <select id="sprintCategory">
+        <option value="all">All Categories</option>
+        <option value="html">HTML</option>
+        <option value="css">CSS</option>
+        <option value="js">JavaScript</option>
+      </select>
+    </label>
+    <label>Difficulty
+      <select id="sprintDifficulty">
+        <option value="all">All Levels</option>
+        <option value="beginner">Beginner</option>
+        <option value="intermediate">Intermediate</option>
+        <option value="advanced">Advanced</option>
+      </select>
+    </label>
+  </div>
+  <button class="btn-primary" onclick="startSprint()">▶ Start Sprint</button>
+</div>`;
+  }
+
+  function renderSprintGame() {
+    const q = sprintState.questions[sprintState.questionIndex];
+    if (!q) { finishSprint(); return; }
+    const area = document.getElementById("sprintArea");
+    const hearts = "❤️".repeat(sprintState.lives) + "🖤".repeat(Math.max(0, 3 - sprintState.lives));
+    const pct = sprintState.timeLeft / 15 * 100;
+    area.innerHTML = `\
+<div class="sprint-hud">
+  <span>${hearts}</span>
+  <span>Score: ${sprintState.score}</span>
+  <span>Streak: ${sprintState.streak}🔥</span>
+  <span>Q ${sprintState.questionIndex + 1}/${sprintState.totalQuestions}</span>
+</div>
+<div class="sprint-timer-bar">
+  <div id="sprintTimerFill" style="width: ${pct}%"></div>
+</div>
+<div class="sprint-question">
+  <div class="sprint-q-badge">${q.category.toUpperCase()} · ${q.difficulty}</div>
+  <p class="sprint-q-text">${q.question}</p>
+  ${q.code ? `<pre class="code-block sprint-code"><code>${q.code}</code></pre>` : ""}
+  <div class="sprint-options" id="sprintOptions">
+    ${q.options.map((opt, i) => `<button class="sprint-opt" onclick="answerSprint(${i})">${opt}</button>`).join("")}
+  </div>
+</div>`;
+  }
+
+  function renderSprintResult() {
+    const pct = sprintState.totalQuestions ? Math.round((sprintState.totalCorrect / sprintState.totalQuestions) * 100) : 0;
+    document.getElementById("sprintArea").innerHTML = `\
+<div class="sprint-result">
+  <h5>${sprintState.lives > 0 ? "🎉 Sprint Complete!" : "💀 Game Over"}</h5>
+  <div class="sprint-result-stats">
+    <div class="stat-card"><span>Score</span><strong>${sprintState.score}</strong></div>
+    <div class="stat-card"><span>Correct</span><strong>${sprintState.totalCorrect}/${sprintState.totalQuestions}</strong></div>
+    <div class="stat-card"><span>Accuracy</span><strong>${pct}%</strong></div>
+    <div class="stat-card"><span>Best Streak</span><strong>${sprintState.maxStreak}</strong></div>
+  </div>
+  <p>${sprintState.score > 0 ? `Earned +${sprintState.score} XP!` : "Try again to earn XP."}</p>
+  <button class="btn-primary" onclick="startSprint()">▶ Play Again</button>
+  <button class="btn-secondary" onclick="renderSprintIntro()">← Change Settings</button>
+</div>`;
+  }
+
+  function startSprint() {
+    const cat = document.getElementById("sprintCategory")?.value || "all";
+    const diff = document.getElementById("sprintDifficulty")?.value || "all";
+    const qs = generateSprintQuestions(cat, diff, 30);
+    if (qs.length < 3) {
+      showNotification("Not enough questions for this filter. Try a broader selection.", "warning");
       return;
     }
-
-    startButton.textContent = rushRoundActive ? "↻ Restart Round" : `▶ Start Round (${formatRushDurationLabel(rushRoundDuration)})`;
-  }
-
-  function updateRushPauseButton() {
-    const pauseButton = document.getElementById("rushPauseBtn");
-    if (!pauseButton) {
-      return;
-    }
-
-    pauseButton.style.display = rushRoundActive || rushPaused ? "inline-flex" : "none";
-    pauseButton.textContent = rushPaused ? "▶ Resume" : "⏸️ Pause";
-  }
-
-  function setRushDuration(value) {
-    const duration = Number(value);
-    if (!Number.isFinite(duration) || duration <= 0) {
-      return;
-    }
-
-    rushRoundDuration = duration;
-    if (!rushRoundActive) {
-      rushTimeLeft = duration;
-      updateRushStats();
-    }
-
-    const select = document.getElementById("rushDurationSelect");
-    if (select) {
-      select.value = String(duration);
-    }
-
-    refreshRushStartButtonLabel();
-  }
-
-  function setRushResult(message, type = "", visible = true) {
-    const result = document.getElementById("rushResult");
-    if (!result) {
-      return;
-    }
-
-    result.textContent = message;
-    result.className = `activity-result${type ? ` ${type}` : ""}`;
-    result.style.display = visible ? "block" : "none";
-  }
-
-  function getRandomRushQuestion() {
-    return rushQuestions[Math.floor(Math.random() * rushQuestions.length)];
-  }
-
-  function renderRushQuestion() {
-    if (!currentRushQuestion) {
-      return;
-    }
-
-    document.getElementById("rushPromptTitle").textContent = currentRushQuestion.title;
-    document.getElementById("rushPromptText").textContent = currentRushQuestion.prompt;
-    const options = document.getElementById("rushOptions");
-    options.innerHTML = "";
-    currentRushQuestion.options.forEach((option) => {
-      const button = document.createElement("button");
-      button.className = "rush-option";
-      button.type = "button";
-      button.textContent = option;
-      button.addEventListener("click", () => answerRushQuestion(option));
-      options.appendChild(button);
-    });
-  }
-
-  function nextRushQuestion() {
-    currentRushQuestion = getRandomRushQuestion();
-    renderRushQuestion();
-  }
-
-  function finishRushGame() {
-    clearInterval(rushTimer);
-    rushTimer = null;
-    rushRoundActive = false;
-    rushPaused = false;
-    const xpReward = Math.max(10, Math.round(rushScore / 8));
-    appState.xp += xpReward;
-    setRushResult(`Round complete. Score ${rushScore}, best streak ${rushStreak}, reward +${xpReward} XP.`, "success");
-    updateDashboard();
-    Array.from(document.querySelectorAll(".rush-option")).forEach((button) => {
-      button.disabled = true;
-    });
-    refreshRushStartButtonLabel();
-    updateRushPauseButton();
-  }
-
-  function startRushGame() {
-    clearInterval(rushTimer);
-    rushTimeLeft = rushRoundDuration;
-    rushScore = 0;
-    rushStreak = 0;
-    rushRoundActive = true;
-    rushPaused = false;
-    setRushResult("", "", false);
-    nextRushQuestion();
-    updateRushStats();
-    refreshRushStartButtonLabel();
-    updateRushPauseButton();
-
-    rushTimer = setInterval(() => {
-      rushTimeLeft = Math.max(0, rushTimeLeft - 1);
-      updateRushStats();
-      if (rushTimeLeft <= 0) {
-        finishRushGame();
+    sprintState = { category: cat, difficulty: diff, lives: 3, score: 0, streak: 0, maxStreak: 0, questionIndex: 0, questions: qs, timer: null, timeLeft: 15, active: true, finished: false, totalCorrect: 0, totalQuestions: qs.length, answered: false };
+    sprintState.timeLeft = 15;
+    renderSprintGame();
+    sprintState.timer = setInterval(() => {
+      if (!sprintState.active) return;
+      sprintState.timeLeft--;
+      const fill = document.getElementById("sprintTimerFill");
+      if (fill) fill.style.width = `${sprintState.timeLeft / 15 * 100}%`;
+      if (sprintState.timeLeft <= 0) {
+        sprintState.lives--;
+        sprintState.streak = 0;
+        sprintState.answered = true;
+        playWrongBuzz();
+        const opts = document.querySelectorAll(".sprint-opt");
+        opts.forEach((b, i) => { b.disabled = true; if (i === sprintState.questions[sprintState.questionIndex].answer) b.classList.add("correct"); });
+        setTimeout(() => nextSprintQuestion(), 1200);
       }
     }, 1000);
   }
 
-  function pauseRushGame() {
-    if (!rushRoundActive && !rushPaused) {
-      return;
-    }
-
-    const optionButtons = Array.from(document.querySelectorAll(".rush-option"));
-
-    if (!rushPaused) {
-      clearInterval(rushTimer);
-      rushTimer = null;
-      rushRoundActive = false;
-      rushPaused = true;
-      optionButtons.forEach((button) => {
-        button.disabled = true;
-      });
-      setRushResult("Tag Rush paused.", "info");
-      updateRushPauseButton();
-      return;
-    }
-
-    rushPaused = false;
-    rushRoundActive = true;
-    optionButtons.forEach((button) => {
-      button.disabled = false;
-    });
-    setRushResult("", "", false);
-    updateRushPauseButton();
-
-    rushTimer = setInterval(() => {
-      rushTimeLeft = Math.max(0, rushTimeLeft - 1);
-      updateRushStats();
-      if (rushTimeLeft <= 0) {
-        finishRushGame();
-      }
-    }, 1000);
-  }
-
-  function answerRushQuestion(choice) {
-    if (!rushRoundActive || !currentRushQuestion) {
-      return;
-    }
-
-    const buttons = Array.from(document.querySelectorAll(".rush-option"));
-    const isCorrect = choice === currentRushQuestion.answer;
-
-    buttons.forEach((button) => {
-      button.disabled = true;
-      if (button.textContent === currentRushQuestion.answer) {
-        button.classList.add("correct");
-      } else if (button.textContent === choice && !isCorrect) {
-        button.classList.add("wrong");
-      }
-    });
-
-    if (isCorrect) {
-      rushStreak += 1;
-      rushScore += 20 + (rushStreak - 1) * 5;
+  function answerSprint(choice) {
+    if (!sprintState.active || sprintState.answered) return;
+    sprintState.answered = true;
+    const q = sprintState.questions[sprintState.questionIndex];
+    const correct = choice === q.answer;
+    const opts = document.querySelectorAll(".sprint-opt");
+    opts.forEach((b, i) => { b.disabled = true; if (i === q.answer) b.classList.add("correct"); if (i === choice && !correct) b.classList.add("wrong"); });
+    if (correct) {
+      sprintState.streak++;
+      sprintState.maxStreak = Math.max(sprintState.maxStreak, sprintState.streak);
+      sprintState.score += 10 + (sprintState.streak - 1) * 2;
+      sprintState.totalCorrect++;
       playCorrectChime();
-      setRushResult(`Correct. ${currentRushQuestion.answer} is the best answer.`, "success");
     } else {
-      rushStreak = 0;
+      sprintState.lives--;
+      sprintState.streak = 0;
       playWrongBuzz();
-      setRushResult(`Not quite. The best answer was ${currentRushQuestion.answer}.`, "error");
     }
+    clearInterval(sprintState.timer);
+    if (sprintState.lives <= 0) {
+      setTimeout(() => finishSprint(), 800);
+    } else {
+      setTimeout(() => nextSprintQuestion(), 1000);
+    }
+  }
 
-    updateRushStats();
-    setTimeout(() => {
-      if (!rushRoundActive) {
-        return;
+  function nextSprintQuestion() {
+    sprintState.questionIndex++;
+    if (sprintState.questionIndex >= sprintState.totalQuestions) { finishSprint(); return; }
+    sprintState.answered = false;
+    sprintState.timeLeft = 15;
+    renderSprintGame();
+    clearInterval(sprintState.timer);
+    sprintState.timer = setInterval(() => {
+      if (!sprintState.active) return;
+      sprintState.timeLeft--;
+      const fill = document.getElementById("sprintTimerFill");
+      if (fill) fill.style.width = `${sprintState.timeLeft / 15 * 100}%`;
+      if (sprintState.timeLeft <= 0) {
+        sprintState.lives--;
+        sprintState.streak = 0;
+        sprintState.answered = true;
+        playWrongBuzz();
+        const opts = document.querySelectorAll(".sprint-opt");
+        opts.forEach((b, i) => { b.disabled = true; if (i === sprintState.questions[sprintState.questionIndex].answer) b.classList.add("correct"); });
+        if (sprintState.lives <= 0) { setTimeout(() => finishSprint(), 800); } else { setTimeout(() => nextSprintQuestion(), 1200); }
       }
-      setRushResult("", "", false);
-      nextRushQuestion();
-    }, 850);
+    }, 1000);
   }
 
-  function skipRushQuestion() {
-    if (!rushRoundActive) {
-      startRushGame();
-      return;
+  function finishSprint() {
+    clearInterval(sprintState.timer);
+    sprintState.active = false;
+    sprintState.finished = true;
+    const xpGain = sprintState.score;
+    if (xpGain > 0) {
+      appState.xp += xpGain;
+      logXpEarned(xpGain);
+      showXpPopup(xpGain);
     }
-
-    rushStreak = 0;
-    setRushResult(`Skipped. The best answer was ${currentRushQuestion.answer}.`, "info");
-    updateRushStats();
-    setTimeout(() => {
-      if (!rushRoundActive) {
-        return;
-      }
-      setRushResult("", "", false);
-      nextRushQuestion();
-    }, 700);
-  }
-
-  function escapeTypingHtml(value) {
-    return String(value).replace(/[&<>"]/g, (char) => ({
-      "&": "&amp;",
-      "<": "&lt;",
-      ">": "&gt;",
-      '"': "&quot;"
-    }[char]));
-  }
-
-  function buildTypingText() {
-    const words = [];
-    for (let i = 0; i < 28; i += 1) {
-      words.push(typingWords[Math.floor(Math.random() * typingWords.length)]);
-    }
-    typingTargetText = words.join(" ");
-  }
-
-  function getTypingInputElement() {
-    return document.getElementById("typingInput");
-  }
-
-  function getTypingMetrics(inputValue = "") {
-    const targetWords = typingTargetText ? typingTargetText.split(" ") : [];
-    const typedWords = inputValue.trim().split(/\s+/).filter(Boolean);
-    const typedChars = inputValue.length;
-    const correctChars = [...inputValue].filter((char, index) => char === typingTargetText[index]).length;
-    const elapsedSeconds = Math.max(1, typingDuration - remainingTypingSeconds);
-    const elapsedMinutes = elapsedSeconds / 60;
-    const netWpm = Math.max(0, Math.round((correctChars / 5) / elapsedMinutes));
-    const wps = Number((typedWords.length / elapsedSeconds).toFixed(1));
-    const accuracy = typedChars ? Math.round((correctChars / typedChars) * 100) : 100;
-    const completedWords = typedWords.filter((word, index) => word === targetWords[index]).length;
-
-    return {
-      typedChars,
-      correctChars,
-      accuracy,
-      netWpm,
-      wps,
-      elapsedSeconds,
-      completedWords
-    };
-  }
-
-  function renderTypingText(inputValue = "") {
-    const display = document.getElementById("typingDisplay");
-    if (!display) {
-      return;
-    }
-
-    if (!typingTargetText) {
-      display.textContent = 'Click "Start Test" to begin →';
-      return;
-    }
-
-    const typedMarkup = [...typingTargetText.slice(0, inputValue.length)].map((char, index) => {
-      const typed = inputValue[index];
-      const className = typed === char ? "typing-char-correct" : "typing-char-wrong";
-      const shownChar = typed === char ? char : typed;
-      return `<span class="${className}">${escapeTypingHtml(shownChar)}</span>`;
-    }).join("");
-
-    if (inputValue.length >= typingTargetText.length) {
-      display.innerHTML = typedMarkup;
-      return;
-    }
-
-    const currentChar = escapeTypingHtml(typingTargetText[inputValue.length]);
-    const pendingText = escapeTypingHtml(typingTargetText.slice(inputValue.length + 1));
-    display.innerHTML = `${typedMarkup}<span class="typing-char-current">${currentChar}</span><span class="typing-char-pending">${pendingText}</span>`;
-  }
-
-  function updateTypingDashboard(metrics) {
-    document.getElementById("typingWPM").textContent = metrics.netWpm;
-    document.getElementById("typingAccuracy").textContent = metrics.accuracy;
-    document.getElementById("typingLevel").textContent = Math.max(1, Math.ceil(metrics.netWpm / 15));
-    document.getElementById("typingTimeLeft").textContent = `${remainingTypingSeconds}s`;
-    document.getElementById("typingChars").textContent = metrics.typedChars;
-    document.getElementById("typingWordsDone").textContent = metrics.completedWords;
-  }
-
-  function setTypingResult(message, type = "", visible = true) {
-    const result = document.getElementById("typingResult");
-    if (!result) {
-      return;
-    }
-
-    result.textContent = message;
-    result.className = `activity-result${type ? ` ${type}` : ""}`;
-    result.style.display = visible ? "block" : "none";
-  }
-
-  function updateTypingResultCards(metrics) {
-    document.getElementById("typingResultWpm").textContent = metrics.netWpm;
-    document.getElementById("typingResultWps").textContent = metrics.wps.toFixed(1);
-    document.getElementById("typingResultAccuracy").textContent = `${metrics.accuracy}%`;
-    document.getElementById("typingResultCorrectChars").textContent = metrics.correctChars;
-    document.getElementById("typingResultTotalChars").textContent = metrics.typedChars;
-    document.getElementById("typingResultTimeUsed").textContent = `${metrics.elapsedSeconds}s`;
-  }
-
-  function setTypingResultsVisibility(visible) {
-    const resultsGrid = document.getElementById("typingResultsGrid");
-    if (resultsGrid) {
-      resultsGrid.style.display = visible ? "grid" : "none";
-    }
-  }
-
-  function formatTypingDurationLabel(seconds) {
-    return seconds < 60 ? `${seconds}s` : `${Math.round(seconds / 60)}m`;
-  }
-
-  function refreshTypingStartButtonLabel() {
-    const startButton = document.getElementById("typingStartBtn");
-    if (!startButton) {
-      return;
-    }
-
-    startButton.textContent = typingTestActive ? "↻ Restart Test" : `▶ Start Test (${formatTypingDurationLabel(typingDuration)})`;
-  }
-
-  function setTypingDuration(value) {
-    const duration = Number(value);
-    if (!Number.isFinite(duration) || duration <= 0) {
-      return;
-    }
-
-    typingDuration = duration;
-    remainingTypingSeconds = duration;
-    const select = document.getElementById("typingDurationSelect");
-    if (select) {
-      select.value = String(duration);
-    }
-    document.getElementById("typingTimeLeft").textContent = `${duration}s`;
-    refreshTypingStartButtonLabel();
-
-    if (!typingTestActive && !typingPaused) {
-      document.getElementById("typingProgressBar").style.width = "0%";
-    }
-  }
-
-  function stopTypingTimer() {
-    clearInterval(typingTimer);
-    typingTimer = null;
-  }
-
-  function syncTypingProgress() {
-    const elapsed = typingDuration - remainingTypingSeconds;
-    const progress = Math.min(100, (elapsed / typingDuration) * 100);
-    document.getElementById("typingProgressBar").style.width = `${progress}%`;
-  }
-
-  function tickTypingTimer() {
-    const input = getTypingInputElement();
-    const elapsedMs = Date.now() - typingStartedAt;
-    remainingTypingSeconds = Math.max(0, typingDuration - Math.floor(elapsedMs / 1000));
-    syncTypingProgress();
-    updateTypingDashboard(getTypingMetrics(input.value));
-
-    if (elapsedMs >= typingDuration * 1000) {
-      finishTypingTest();
-    }
-  }
-
-  function setupTypingGame() {
-    if (typingGameInitialized) {
-      return;
-    }
-
-    const input = getTypingInputElement();
-    if (!input) {
-      return;
-    }
-
-    input.addEventListener("input", () => {
-      const limitedValue = input.value.slice(0, typingTargetText.length || input.value.length);
-      if (input.value !== limitedValue) {
-        input.value = limitedValue;
-      }
-
-      const metrics = getTypingMetrics(input.value);
-      renderTypingText(input.value);
-      updateTypingDashboard(metrics);
-
-      if (typingTestActive && input.value === typingTargetText) {
-        finishTypingTest();
-      }
-    });
-
-    input.addEventListener("keydown", (event) => {
-      if (event.key === "Tab") {
-        event.preventDefault();
-      }
-    });
-
-    typingGameInitialized = true;
-    setRushDuration(rushRoundDuration);
-    setTypingDuration(typingDuration);
-    renderTypingText("");
-    const initialMetrics = {
-      typedChars: 0,
-      correctChars: 0,
-      accuracy: 100,
-      netWpm: 0,
-      wps: 0,
-      elapsedSeconds: 0,
-      completedWords: 0
-    };
-    updateTypingDashboard(initialMetrics);
-    updateTypingResultCards(initialMetrics);
-    setTypingResultsVisibility(false);
-    refreshTypingStartButtonLabel();
-  }
-
-  function finishTypingTest() {
-    if (!typingTestActive && !typingPaused) {
-      return;
-    }
-
-    stopTypingTimer();
-    typingPaused = false;
-    typingTestActive = false;
-
-    const input = getTypingInputElement();
-    const metrics = getTypingMetrics(input.value);
-    const xpReward = Math.max(5, Math.min(35, Math.round(metrics.netWpm / 2)));
-
-    appState.typingBestWpm = Math.max(appState.typingBestWpm, metrics.netWpm);
-    appState.xp += xpReward;
-    remainingTypingSeconds = 0;
-    syncTypingProgress();
-    updateTypingDashboard(metrics);
-    renderTypingText(input.value);
-    input.disabled = true;
-    document.getElementById("typingPauseBtn").style.display = "none";
-    document.getElementById("typingPauseBtn").textContent = "⏸️ Pause";
-    refreshTypingStartButtonLabel();
-    updateTypingResultCards(metrics);
-    setTypingResultsVisibility(true);
-    setTypingResult(`Finished at ${metrics.netWpm} WPM with ${metrics.accuracy}% accuracy. You earned +${xpReward} XP.`, "success");
-    showNotification(`Typing test complete: ${metrics.netWpm} WPM`, "xp");
+    appState.sprintHighScore = Math.max(appState.sprintHighScore || 0, sprintState.score);
+    renderSprintResult();
     updateDashboard();
   }
 
-  function startTypingTest() {
-    stopTypingTimer();
-    typingPaused = false;
-    typingTestActive = true;
-    remainingTypingSeconds = typingDuration;
-    typingStartedAt = Date.now();
-    buildTypingText();
+  const linkUpData = [
+    { category: "html", left: "&lt;h1&gt;", right: "Main page heading" },
+    { category: "html", left: "&lt;p&gt;", right: "Paragraph of text" },
+    { category: "html", left: "&lt;a&gt;", right: "Hyperlink to another page" },
+    { category: "html", left: "&lt;img&gt;", right: "Displays an image" },
+    { category: "html", left: "&lt;nav&gt;", right: "Navigation links area" },
+    { category: "html", left: "&lt;main&gt;", right: "Primary page content" },
+    { category: "html", left: "&lt;footer&gt;", right: "Bottom section of page" },
+    { category: "html", left: "&lt;form&gt;", right: "Collects user input" },
+    { category: "html", left: "&lt;table&gt;", right: "Tabular data container" },
+    { category: "html", left: "&lt;button&gt;", right: "Clickable action element" },
+    { category: "html", left: "&lt;br&gt;", right: "Inserts a line break" },
+    { category: "html", left: "&lt;hr&gt;", right: "Horizontal separator line" },
+    { category: "html", left: "&lt;strong&gt;", right: "Bold / important text" },
+    { category: "html", left: "&lt;em&gt;", right: "Emphasized / italic text" },
+    { category: "html", left: "&lt;ul&gt;", right: "Unordered bullet list" },
+    { category: "html", left: "&lt;ol&gt;", right: "Ordered numbered list" },
+    { category: "html", left: "&lt;li&gt;", right: "Individual list item" },
+    { category: "html", left: "&lt;div&gt;", right: "Generic block container" },
+    { category: "html", left: "&lt;span&gt;", right: "Generic inline container" },
+    { category: "html", left: "&lt;section&gt;", right: "Thematic content group" },
+    { category: "css", left: "color: red", right: "Sets text color" },
+    { category: "css", left: "display: flex", right: "Flexbox layout mode" },
+    { category: "css", left: "margin: auto", right: "Centers block elements" },
+    { category: "css", left: "font-size: 16px", right: "Sets text size" },
+    { category: "css", left: "background-color", right: "Element background color" },
+    { category: "css", left: "border-radius", right: "Rounds element corners" },
+    { category: "css", left: "padding: 10px", right: "Space inside element" },
+    { category: "css", left: "position: absolute", right: "Removes from document flow" },
+    { category: "css", left: "z-index: 100", right: "Stacking order control" },
+    { category: "css", left: "@media", right: "Responsive breakpoint rule" },
+    { category: "css", left: "font-weight: bold", right: "Makes text thicker" },
+    { category: "css", left: "text-align: center", right: "Centers inline content" },
+    { category: "css", left: "box-shadow", right: "Adds drop shadow to element" },
+    { category: "css", left: "display: grid", right: "Two-dimensional grid layout" },
+    { category: "css", left: "overflow: hidden", right: "Clips overflowing content" },
+    { category: "css", left: "cursor: pointer", right: "Hand cursor on hover" },
+    { category: "css", left: "opacity: 0.5", right: "Sets element transparency" },
+    { category: "css", left: "border: 1px solid", right: "Adds a visible border" },
+    { category: "css", left: "flex-wrap: wrap", right: "Allows flex items to wrap" },
+    { category: "css", left: "transition: 0.3s", right: "Smooth property animation" },
+    { category: "js", left: "let x = 5", right: "Declares a variable" },
+    { category: "js", left: "function hello() {}", right: "Defines a reusable block" },
+    { category: "js", left: "if (x > 0) {}", right: "Conditional execution" },
+    { category: "js", left: "array.map(fn)", right: "Transforms each array element" },
+    { category: "js", left: "console.log()", right: "Prints to dev console" },
+    { category: "js", left: "addEventListener", right: "Attaches event handler" },
+    { category: "js", left: "JSON.parse()", right: "Converts JSON string to object" },
+    { category: "js", left: "Promise", right: "Handles async operations" },
+    { category: "js", left: "const", right: "Block-scoped constant" },
+    { category: "js", left: "=== strict", right: "Equality without type coercion" },
+    { category: "js", left: "array.filter(fn)", right: "Filters array by condition" },
+    { category: "js", left: "array.reduce(fn)", right: "Reduces array to single value" },
+    { category: "js", left: "document.querySelector", right: "Selects first matching DOM element" },
+    { category: "js", left: "try { } catch { }", right: "Error handling block" },
+    { category: "js", left: "async function", right: "Declares an async function" },
+    { category: "js", left: "await promise", right: "Waits for promise resolution" },
+    { category: "js", left: "setTimeout(fn, ms)", right: "Runs function after delay" },
+    { category: "js", left: "class MyClass {}", right: "Defines a class blueprint" },
+    { category: "js", left: "import ... from ...", right: "Imports from a module" },
+    { category: "js", left: "export default", right: "Exports module default value" },
+  ];
 
-    const input = getTypingInputElement();
-    input.disabled = false;
+  function getFilteredLinkUpPairs(category) {
+    let pairs = [...linkUpData];
+    if (category !== "all") pairs = pairs.filter((p) => p.category === category);
+    for (let i = pairs.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [pairs[i], pairs[j]] = [pairs[j], pairs[i]];
+    }
+    return pairs;
+  }
+
+  function renderLinkUpSetup() {
+    document.getElementById("linkUpArea").innerHTML = `\
+<div class="link-setup">
+  <h5>Link Up</h5>
+  <p>Match each code concept on the left with its correct description on the right. Click a left item, then click its match.</p>
+  <div class="game-config">
+    <label>Category
+      <select id="linkCategory">
+        <option value="all">All Categories</option>
+        <option value="html">HTML</option>
+        <option value="css">CSS</option>
+        <option value="js">JavaScript</option>
+      </select>
+    </label>
+  </div>
+  <button class="btn-primary" onclick="startLinkUp()">▶ Start Matching</button>
+</div>`;
+  }
+
+  function renderLinkUpGame() {
+    const area = document.getElementById("linkUpArea");
+    const shuffledLeft = [...linkUpState.pairs].sort(() => Math.random() - 0.5);
+    const shuffledRight = [...linkUpState.pairs].sort(() => Math.random() - 0.5);
+    area.innerHTML = `\
+<div class="link-hud">
+  <span>Score: ${linkUpState.score}</span>
+  <span>Mistakes: ${linkUpState.mistakes}</span>
+  <span>Matched: ${linkUpState.matchedPairs.length}/${linkUpState.pairs.length}</span>
+  <span>⏱ ${linkUpState.timeLeft}s</span>
+</div>
+<div class="linkup-columns">
+  <div class="linkup-col" id="linkLeftCol">
+    ${shuffledLeft.map((p, i) => {
+      const m = linkUpState.matchedPairs.some((mp) => mp.left === p.left && mp.right === p.right);
+      return `<button class="linkup-item ${m ? "matched" : linkUpState.selectedLeft === i ? "selected" : ""}" data-link-left="${i}" ${m ? "disabled" : ""}>${p.left}</button>`;
+    }).join("")}
+  </div>
+  <div class="linkup-col" id="linkRightCol">
+    ${shuffledRight.map((p, i) => {
+      const m = linkUpState.matchedPairs.some((mp) => mp.left === p.left && mp.right === p.right);
+      return `<button class="linkup-item ${m ? "matched" : ""}" data-link-right="${i}" ${m ? "disabled" : ""}>${p.right}</button>`;
+    }).join("")}
+  </div>
+</div>`;
+    document.getElementById("linkLeftCol").addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-link-left]");
+      if (btn && !btn.disabled) selectLinkLeft(Number(btn.dataset.linkLeft));
+    });
+    document.getElementById("linkRightCol").addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-link-right]");
+      if (btn && !btn.disabled) selectLinkRight(Number(btn.dataset.linkRight));
+    });
+  }
+
+  function renderLinkUpResult() {
+    document.getElementById("linkUpArea").innerHTML = `\
+<div class="link-result">
+  <h5>${linkUpState.mistakes === 0 ? "🎉 Perfect Match!" : "✅ All Matched!"}</h5>
+  <div class="sprint-result-stats">
+    <div class="stat-card"><span>Score</span><strong>${linkUpState.score}</strong></div>
+    <div class="stat-card"><span>Mistakes</span><strong>${linkUpState.mistakes}</strong></div>
+    <div class="stat-card"><span>Accuracy</span><strong>${linkUpState.pairs.length ? Math.round((linkUpState.pairs.length / (linkUpState.pairs.length + linkUpState.mistakes)) * 100) : 0}%</strong></div>
+  </div>
+  <p>${linkUpState.score > 0 ? `Earned +${linkUpState.score} XP!` : ""}</p>
+  <button class="btn-primary" onclick="startLinkUp()">▶ Play Again</button>
+  <button class="btn-secondary" onclick="renderLinkUpSetup()">← Change Settings</button>
+</div>`;
+  }
+
+  function startLinkUp() {
+    const cat = document.getElementById("linkCategory")?.value || "all";
+    const pairs = getFilteredLinkUpPairs(cat);
+    if (pairs.length < 3) { showNotification("Not enough pairs. Try a broader category.", "warning"); return; }
+    const totalPairs = Math.min(pairs.length, 10);
+    linkUpState = { category: cat, pairs: pairs.slice(0, totalPairs), selectedLeft: null, matchedPairs: [], wrongPairs: [], timer: null, timeLeft: totalPairs * 10, score: 0, active: true, mistakes: 0, finished: false };
+    renderLinkUpGame();
+    linkUpState.timer = setInterval(() => {
+      linkUpState.timeLeft--;
+      const hud = document.querySelector(".link-hud span:last-child");
+      if (hud) hud.textContent = `⏱ ${linkUpState.timeLeft}s`;
+      if (linkUpState.timeLeft <= 0) { clearInterval(linkUpState.timer); linkUpState.active = false; finishLinkUp(); }
+    }, 1000);
+  }
+
+  function selectLinkLeft(index) {
+    if (!linkUpState.active) return;
+    linkUpState.selectedLeft = index;
+    document.querySelectorAll("#linkLeftCol .link-card").forEach((c, i) => c.classList.toggle("selected", i === index));
+  }
+
+  function selectLinkRight(index) {
+    if (!linkUpState.active || linkUpState.selectedLeft === null) return;
+    const leftIdx = linkUpState.selectedLeft;
+    const shuffledLeft = document.querySelectorAll("#linkLeftCol .link-card");
+    const shuffledRight = document.querySelectorAll("#linkRightCol .link-card");
+    const leftText = shuffledLeft[leftIdx]?.textContent?.trim() || "";
+    const rightText = shuffledRight[index]?.textContent?.trim() || "";
+    const match = linkUpState.pairs.find((p) => p.left === leftText && p.right === rightText);
+    if (match && !linkUpState.matchedPairs.some((mp) => mp.left === match.left)) {
+      linkUpState.matchedPairs.push(match);
+      linkUpState.score += 10;
+      shuffledLeft[leftIdx].classList.add("matched");
+      shuffledLeft[leftIdx].disabled = true;
+      shuffledRight[index].classList.add("matched");
+      shuffledRight[index].disabled = true;
+      playCorrectChime();
+      if (linkUpState.matchedPairs.length === linkUpState.pairs.length) { clearInterval(linkUpState.timer); linkUpState.active = false; finishLinkUp(); }
+    } else {
+      linkUpState.mistakes++;
+      playWrongBuzz();
+      shuffledLeft[leftIdx].classList.add("wrong");
+      setTimeout(() => shuffledLeft[leftIdx]?.classList.remove("wrong"), 500);
+    }
+    linkUpState.selectedLeft = null;
+    document.querySelectorAll("#linkLeftCol .link-card").forEach((c) => c.classList.remove("selected"));
+  }
+
+  function finishLinkUp() {
+    linkUpState.active = false;
+    linkUpState.finished = true;
+    const xpGain = linkUpState.score;
+    if (xpGain > 0) {
+      appState.xp += xpGain;
+      logXpEarned(xpGain);
+      showXpPopup(xpGain);
+    }
+    renderLinkUpResult();
+    updateDashboard();
+  }
+
+  const bugTemplateData = [
+    { cat: "html", diff: "beginner", code: "<!DOCTYPE html>\n<html>\n<head>\n  <title>My Page</title>\n</head>\n<boy>\n  <h1>Hello</h1>\n</boy>\n</html>", line: 5, label: "Replace &lt;boy&gt; with &lt;body&gt;", c: "&lt;body&gt;", w: ["&lt;main&gt;", "&lt;section&gt;", "&lt;div&gt;"], exp: "&lt;boy&gt; is not a valid HTML tag. The visible content goes inside &lt;body&gt;." },
+    { cat: "html", diff: "beginner", code: "<html>\n<head>\n  <title>Hello</title>\n</head>\n<body>\n  <h1>Welcome</h1>\n  <img src=\"photo.jpg\" alt=\"A photo\" />\n  <a href=\"page.html\"Click here</a>\n</body>\n</html>", line: 7, label: "Close the &lt;a&gt; tag properly", c: "&lt;a href=\"page.html\"&gt;Click here&lt;/a&gt;", w: ["&lt;a href=\"page.html\"Click here&lt;/a&gt;", "&lt;a href=\"page.html\"&gt;Click here", "Click here&lt;/a&gt;"], exp: "The anchor tag is missing its closing &gt; after href." },
+    { cat: "html", diff: "beginner", code: "<ul>\n  <li>Item 1</li>\n  <li>Item 2</li>\n</ul>\n<a href=\"#\">Link</a>\n<br>\n<h1>Title<h1>", line: 6, label: "Use &lt;/h1&gt; to close the heading", c: "&lt;/h1&gt;", w: ["&lt;h1&gt;&lt;/h1&gt;", "&lt;\\h1&gt;", "&lt;h1 /&gt;"], exp: "The heading closes with &lt;h1&gt; instead of &lt;/h1&gt;. Closing tags need a forward slash." },
+    { cat: "html", diff: "intermediate", code: "<form>\n  <label for=\"email\">Email</label>\n  <input type=\"emal\" id=\"email\" name=\"email\">\n  <button type=\"submit\">Send</button>\n</form>", line: 2, label: "Change type to email", c: "type=\"email\"", w: ["type=\"text\"", "type=\"emal\"", "type=\"mail\""], exp: "The input type is misspelled as 'emal'. Correct is 'email'." },
+    { cat: "html", diff: "intermediate", code: "<table>\n  <tr>\n    <td>Cell 1</td>\n    <td>Cell 2</td>\n  </tr>\n  <tr>\n    <td>Cell 3</td>\n    <td>Cell 4</td\n  </tr>\n</table>", line: 7, label: "Close &lt;td&gt; properly", c: "&lt;td&gt;Cell 4&lt;/td&gt;", w: ["&lt;td&gt;Cell 4&lt;td&gt;", "&lt;td&gt;Cell 4", "Cell 4&lt;/td&gt;"], exp: "The &lt;td&gt; tag is missing its closing &gt;." },
+    { cat: "html", diff: "advanced", code: "<section aria-label=\"Main\">\n  <h2>Content</h2>\n  <p>Some text here.</p>\n</sektion>", line: 3, label: "Close with &lt;/section&gt;", c: "&lt;/section&gt;", w: ["&lt;/sektion&gt;", "&lt;/sect&gt;", "&lt;section&gt;"], exp: "Closing tag is misspelled as 'sektion'. Should be 'section'." },
+    { cat: "html", diff: "advanced", code: "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"UTF-8\">\n  <title>Test</title>\n</head>\n<body>\n  <header>\n    <nav>\n      <a href=\"#\">Home</a>\n    </nav>\n  </header>\n  <main>\n    <article>\n      <h2>Article Title</h3>\n      <p>Content</p>\n    </article>\n  </main>\n</body>\n</html>", line: 14, label: "Use &lt;/h2&gt; to close", c: "&lt;/h2&gt;", w: ["&lt;/h3&gt;", "&lt;h3&gt;", "&lt;/h2&gt;&lt;/h3&gt;"], exp: "Opens with &lt;h2&gt; but closes with &lt;/h3&gt;. Must match." },
+    { cat: "css", diff: "beginner", code: "p {\n  colour: red;\n  font-size: 16px;\n}", line: 1, label: "Use 'color'", c: "color", w: ["text-color", "font-color", "colour"], exp: "CSS uses American English. The property is 'color'." },
+    { cat: "css", diff: "beginner", code: ".box {\n  background-color: blue;\n  padding: 10px;\n  boarder: 1px solid black;\n}", line: 3, label: "Use 'border'", c: "border", w: ["boarder", "boder", "border-style"], exp: "'boarder' is misspelled. The correct property is 'border'." },
+    { cat: "css", diff: "intermediate", code: ".flex-container {\n  display: flex;\n  justify-content: center;\n  align-items: center;\n  gap: 10px;\n  flex-direcion: column;\n}", line: 5, label: "Use 'flex-direction'", c: "flex-direction", w: ["flex-drection", "flex-direction", "flex-direcion"], exp: "'flex-direcion' is misspelled. Correct is 'flex-direction'." },
+    { cat: "css", diff: "intermediate", code: ".card {\n  margin: 0 auto;\n  width: 80%;\n  border-radius: 8px;\n  shadow: 0 2px 4px rgba(0,0,0,0.1);\n}", line: 4, label: "Use 'box-shadow'", c: "box-shadow", w: ["shadow", "drop-shadow", "element-shadow"], exp: "There is no 'shadow' property. Use 'box-shadow'." },
+    { cat: "css", diff: "advanced", code: ".animated {\n  transition: all 0.3s ease;\n}\n.animated:hover {\n  transition: scale(1.1);\n}", line: 4, label: "Use 'transform'", c: "transform", w: ["transition", "scale", "animate"], exp: "'transition' cannot apply scale. Use 'transform: scale(1.1)'." },
+    { cat: "css", diff: "advanced", code: "button {\n  background: blue;\n  color: white;\n  padding: 10px 20px;\n  border-radius: 50%;\n  coursor: pointer;\n}", line: 5, label: "Use 'cursor'", c: "cursor", w: ["coursor", "curzor", "mouse"], exp: "'coursor' is misspelled. Correct is 'cursor'." },
+    { cat: "html", diff: "beginner", code: "<div class=\"container\">\n  <h1>Hello World</h1>\n  <p>This is a paragraph</p>\n</div>\n<footer>\n  &copy; 2025 My Site\n</foter>", line: 5, label: "Close with &lt;/footer&gt;", c: "&lt;/footer&gt;", w: ["&lt;/foter&gt;", "&lt;footer&gt;", "&lt;/foot&gt;"], exp: "The closing tag is misspelled as 'foter'. Should be 'footer'." },
+    { cat: "css", diff: "beginner", code: "h1 {\n  font-size: 24px;\n  font-weight: bold;\n  collor: navy;\n}", line: 3, label: "Use 'color'", c: "color", w: ["collor", "colour", "text-color"], exp: "'collor' is misspelled. The correct property is 'color'." },
+    { cat: "js", diff: "beginner", code: "function greet() {\n  console.log(\"Hello!\")\n}", line: -1, label: "No bug here", c: "No bug here", w: ["Missing semicolon", "Wrong quotes", "Missing parentheses"], exp: "This code is correct. Semicolons are optional." },
+    { cat: "js", diff: "beginner", code: "const name = \"Alice\"\nname = \"Bob\"\nconsole.log(name)", line: 1, label: "Use 'let' instead", c: "Use 'let'", w: ["Use 'var'", "Remove second line", "Use 'const' again"], exp: "Cannot reassign a 'const'. Use 'let' if the value changes." },
+    { cat: "js", diff: "intermediate", code: "const nums = [1, 2, 3, 4, 5]\nconst doubled = nums.mape(x => x * 2)\nconsole.log(doubled)", line: 1, label: "Use 'map'", c: "map", w: ["mape", "forEach", "filter"], exp: "'mape' is not a valid method. Use 'map'." },
+    { cat: "js", diff: "intermediate", code: "function sum(a, b) {\n  return a + b\n}\nconsole.log(suum(2, 3))", line: 2, label: "Use 'sum'", c: "sum", w: ["suum", "Sum", "add"], exp: "Function is 'sum' but called as 'suum'. Name must match." },
+    { cat: "js", diff: "advanced", code: "fetch(\"https://api.example.com/data\")\n  .then(res => res.json())\n  .then(data => consoel.log(data))\n  .catch(err => console.error(err))", line: 2, label: "Use 'console'", c: "console", w: ["consoel", "Console", "log"], exp: "'consoel' is misspelled. Correct is 'console'." },
+    { cat: "js", diff: "advanced", code: "const btn = document.querySelector(\"button\")\nbtn.addEventListener(\"click\", () => {\n  aleert(\"Clicked!\")\n})", line: 2, label: "Use 'alert'", c: "alert", w: ["aleert", "Alert", "confirm"], exp: "'aleert' is misspelled. Correct is 'alert'." },
+    { cat: "js", diff: "advanced", code: "const delay = ms => new Promise(resolve => {\n  setTimeout(resolve, ms)\n})\nasync function run() {\n  await delay(1000)\n  console.log(\"Done\")\n}\nrun()", line: -1, label: "Code is correct", c: "Code is correct", w: ["Missing return", "Wrong Promise", "async not needed"], exp: "This code is correct! Uses async/await properly." },
+  ];
+
+  function generateBugQuestions(category, count = 15) {
+    let pool = [...bugTemplateData];
+    if (category !== "all") pool = pool.filter((t) => t.cat === category);
+    shuffleArray(pool);
+    const selected = pool.slice(0, Math.min(count, pool.length));
+    return selected.map((t) => makeBugQuestion(t.cat, t.diff, t.code, t.line, t.label, t.c, t.w, t.exp));
+  }
+
+  function renderBugSetup() {
+    document.getElementById("bugArea").innerHTML = `\
+<div class="bug-setup">
+  <h5>Spot the Bug</h5>
+  <p>Read each code snippet carefully. First, find which line contains the bug. Then pick the correct fix!</p>
+  <div class="game-config">
+    <label>Category
+      <select id="bugCategory">
+        <option value="all">All Categories</option>
+        <option value="html">HTML</option>
+        <option value="css">CSS</option>
+        <option value="js">JavaScript</option>
+      </select>
+    </label>
+  </div>
+  <button class="btn-primary" onclick="startBugHunt()">▶ Start Hunting</button>
+</div>`;
+  }
+
+  function renderBugQuestion() {
+    const q = bugState.questions[bugState.questionIndex];
+    const lines = q.code.split("\n");
+    const area = document.getElementById("bugArea");
+    const phase = bugState.phase;
+    area.innerHTML = `\
+<div class="bug-hud">
+  <span>Score: ${bugState.score}</span>
+  <span>Streak: ${bugState.streak}🔥</span>
+  <span>Q ${bugState.questionIndex + 1}/${bugState.totalQuestions}</span>
+  <span>${q.category.toUpperCase()} · ${q.difficulty}</span>
+</div>
+<div class="bug-code-display">
+  <div class="bug-code-label">${phase === "line" ? "Step 1: Click the buggy line" : "Step 2: Pick the fix"}</div>
+  <pre class="code-block">${lines.map((line, i) => `<div class="bug-line-btn${bugState.selectedLine === i ? " selected" : ""}" data-line="${i}">${String(i + 1).padStart(3, " ")}  ${escapeHtml(line)}</div>`).join("")}</pre>
+</div>
+${phase === "fix" ? `\
+<div class="bug-line-btns">
+  ${q.options.map((opt, i) => `<button class="sprint-opt" onclick="selectBugFix(${i})">${opt}</button>`).join("")}
+</div>` : ""}
+${phase === "result" ? `\
+<div class="bug-result-info">
+  <p>${bugState.lastCorrect ? "✅ " : "❌ "} ${q.explanation}</p>
+  <button class="btn-primary" onclick="nextBug()">${bugState.questionIndex + 1 >= bugState.totalQuestions ? "See Results" : "Next →"}</button>
+</div>` : ""}`;
+    if (phase === "line") {
+      area.querySelectorAll(".bug-line-btn").forEach((el) => {
+        el.addEventListener("click", () => selectBuggyLine(Number(el.dataset.line)));
+      });
+    }
+  }
+
+  function renderBugResult() {
+    const pct = bugState.totalQuestions ? Math.round((bugState.totalCorrect / bugState.totalQuestions) * 100) : 0;
+    document.getElementById("bugArea").innerHTML = `\
+<div class="bug-result">
+  <h5>🐛 Bug Hunt Complete!</h5>
+  <div class="sprint-result-stats">
+    <div class="stat-card"><span>Score</span><strong>${bugState.score}</strong></div>
+    <div class="stat-card"><span>Found</span><strong>${bugState.totalCorrect}/${bugState.totalQuestions}</strong></div>
+    <div class="stat-card"><span>Accuracy</span><strong>${pct}%</strong></div>
+    <div class="stat-card"><span>Best Streak</span><strong>${bugState.streak}</strong></div>
+  </div>
+  <p>${bugState.score > 0 ? `Earned +${bugState.score} XP!` : "Try again!"}</p>
+  <button class="btn-primary" onclick="startBugHunt()">▶ Hunt Again</button>
+  <button class="btn-secondary" onclick="renderBugSetup()">← Change Settings</button>
+</div>`;
+  }
+
+  function startBugHunt() {
+    const cat = document.getElementById("bugCategory")?.value || "all";
+    const qs = generateBugQuestions(cat, 15);
+    if (qs.length < 3) { showNotification("Not enough questions.", "warning"); return; }
+    bugState = { category: cat, questions: qs, questionIndex: 0, score: 0, active: true, streak: 0, totalCorrect: 0, phase: "line", selectedLine: null, finished: false, lastCorrect: false, totalQuestions: qs.length };
+    renderBugQuestion();
+  }
+
+  function selectBuggyLine(index) {
+    if (bugState.phase !== "line") return;
+    bugState.selectedLine = index;
+    const q = bugState.questions[bugState.questionIndex];
+    if (q.buggyLine === -1) {
+      bugState.phase = "result";
+      bugState.lastCorrect = true;
+      bugState.streak++;
+      bugState.totalCorrect++;
+      bugState.score += 10;
+      playCorrectChime();
+    } else if (index === q.buggyLine) {
+      bugState.phase = "fix";
+      bugState.lastCorrect = true;
+      bugState.score += 5;
+      playCorrectChime();
+    } else {
+      bugState.phase = "fix";
+      bugState.lastCorrect = false;
+      playWrongBuzz();
+    }
+    renderBugQuestion();
+  }
+
+  function selectBugFix(choice) {
+    if (bugState.phase !== "fix") return;
+    const q = bugState.questions[bugState.questionIndex];
+    if (q.buggyLine === -1) { bugState.phase = "result"; renderBugQuestion(); return; }
+    if (choice === q.answer) {
+      bugState.streak++;
+      bugState.totalCorrect++;
+      bugState.score += 10 + (bugState.streak - 1) * 2;
+      bugState.lastCorrect = true;
+      playCorrectChime();
+    } else {
+      bugState.streak = 0;
+      bugState.lastCorrect = false;
+      playWrongBuzz();
+    }
+    bugState.phase = "result";
+    renderBugQuestion();
+  }
+
+  function nextBug() {
+    bugState.questionIndex++;
+    if (bugState.questionIndex >= bugState.totalQuestions) {
+      const xpGain = bugState.score;
+      if (xpGain > 0) {
+        appState.xp += xpGain;
+        logXpEarned(xpGain);
+        showXpPopup(xpGain);
+      }
+      bugState.active = false;
+      bugState.finished = true;
+      renderBugResult();
+      updateDashboard();
+      return;
+    }
+    bugState.phase = "line";
+    bugState.selectedLine = null;
+    renderBugQuestion();
+  }
+
+  const typingSnippets = [
+    '<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <title>Page</title>\n</head>\n<body>\n  <h1>Hello World</h1>\n</body>\n</html>',
+    'const greet = (name) => {\n  return `Hello, ${name}!`;\n};\nconsole.log(greet("World"));',
+    '.container {\n  display: flex;\n  justify-content: center;\n  align-items: center;\n  gap: 16px;\n  padding: 24px;\n}',
+    '<nav>\n  <ul>\n    <li><a href="#home">Home</a></li>\n    <li><a href="#about">About</a></li>\n  </ul>\n</nav>',
+    'function fibonacci(n) {\n  if (n <= 1) return n;\n  return fibonacci(n - 1) + fibonacci(n - 2);\n}',
+    '.grid {\n  display: grid;\n  grid-template-columns: repeat(3, 1fr);\n  gap: 12px;\n  max-width: 960px;\n  margin: 0 auto;\n}',
+    '<form action="/submit" method="POST">\n  <label for="name">Name</label>\n  <input id="name" type="text" required>\n  <button type="submit">Send</button>\n</form>',
+    'const items = ["HTML", "CSS", "JS"];\nitems.forEach((item, i) => {\n  console.log(`${i + 1}. ${item}`);\n});'
+  ];
+
+  let typingState = { active: false, snippet: "", startTime: 0, correctChars: 0, totalChars: 0, timer: null, timeLeft: 60 };
+
+  function renderTypingSetup() {
+    const setup = document.getElementById("typingSetup");
+    const game = document.getElementById("typingGame");
+    if (setup) setup.style.display = "block";
+    if (game) game.style.display = "none";
+  }
+
+  function startTyping() {
+    const snippet = typingSnippets[Math.floor(Math.random() * typingSnippets.length)];
+    typingState = { active: true, snippet, startTime: 0, correctChars: 0, totalChars: 0, timer: null, timeLeft: 60 };
+    document.getElementById("typingSetup").style.display = "none";
+    document.getElementById("typingGame").style.display = "block";
+    document.getElementById("typingResult").style.display = "none";
+    document.getElementById("typingSnippet").textContent = snippet;
+    const input = document.getElementById("typingInput");
     input.value = "";
+    input.disabled = false;
     input.focus();
+    document.getElementById("typingTime").textContent = "60";
 
-    renderTypingText("");
-    updateTypingDashboard(getTypingMetrics(""));
-    document.getElementById("typingPauseBtn").style.display = "inline-flex";
-    document.getElementById("typingPauseBtn").textContent = "⏸️ Pause";
-    refreshTypingStartButtonLabel();
-    document.getElementById("typingProgressBar").style.width = "0%";
-    setTypingResultsVisibility(false);
-    setTypingResult("", "", false);
-    typingTimer = setInterval(tickTypingTimer, 100);
+    typingState.startTime = Date.now();
+    typingState.timer = setInterval(() => {
+      typingState.timeLeft--;
+      document.getElementById("typingTime").textContent = typingState.timeLeft;
+      if (typingState.timeLeft <= 0) {
+        finishTyping();
+      }
+    }, 1000);
+
+    input.oninput = () => {
+      const typed = input.value;
+      let correct = 0;
+      for (let i = 0; i < typed.length && i < snippet.length; i++) {
+        if (typed[i] === snippet[i]) correct++;
+      }
+      typingState.correctChars = correct;
+      typingState.totalChars = typed.length;
+
+      renderTypingSnippet(snippet, typed);
+
+      const elapsed = (Date.now() - typingState.startTime) / 1000 / 60;
+      const wpm = elapsed > 0 ? Math.round((correct / 5) / elapsed) : 0;
+      const accuracy = typed.length > 0 ? Math.round((correct / typed.length) * 100) : 100;
+      document.getElementById("typingWpm").textContent = wpm;
+      document.getElementById("typingAccuracy").textContent = `${accuracy}%`;
+    };
   }
 
-  function pauseTypingTest() {
-    if (!typingTestActive && !typingPaused) {
-      return;
-    }
-
-    if (!typingPaused) {
-      stopTypingTimer();
-      typingPaused = true;
-      typingTestActive = false;
-      getTypingInputElement().disabled = true;
-      document.getElementById("typingPauseBtn").textContent = "▶ Resume";
-      setTypingResult("", "", false);
-      setTypingResultsVisibility(false);
-      return;
-    }
-
-    typingPaused = false;
-    typingTestActive = true;
-    getTypingInputElement().disabled = false;
-    getTypingInputElement().focus();
-    document.getElementById("typingPauseBtn").textContent = "⏸️ Pause";
-    typingStartedAt = Date.now() - ((typingDuration - remainingTypingSeconds) * 1000);
-    setTypingResult("", "", false);
-    typingTimer = setInterval(tickTypingTimer, 100);
-  }
-
-  function stopPuzzleTimer() {
-    clearInterval(puzzleTimer);
-    puzzleTimer = null;
-  }
-
-  function updatePuzzleStats() {
-    const elapsedSeconds = puzzleStartedAt ? Math.floor((Date.now() - puzzleStartedAt) / 1000) : 0;
-    document.getElementById("puzzleMoves").textContent = puzzleMoves;
-    document.getElementById("puzzleMatches").textContent = `${puzzleMatchedPairs}/${puzzleData[currentPuzzleIndex].pairs.length}`;
-    document.getElementById("puzzleTimer").textContent = `${elapsedSeconds}s`;
-  }
-
-  function createPuzzleDeck() {
-    const puzzle = puzzleData[currentPuzzleIndex];
-    const cards = puzzle.pairs.flatMap((pair, index) => ([
-      { id: `${index}-tag`, pairId: index, type: "Tag", value: pair.label, revealed: false, matched: false },
-      { id: `${index}-meaning`, pairId: index, type: "Meaning", value: pair.match, revealed: false, matched: false }
-    ]));
-    puzzleDeck = shufflePuzzleDeck(cards);
-  }
-
-  function isPuzzleUnlocked(index) {
-    if (index < 0 || index >= puzzleData.length) {
-      return false;
-    }
-
-    return index === 0 || appState.completedPuzzles.includes(index) || appState.completedPuzzles.includes(index - 1);
-  }
-
-  function renderPuzzleBoard() {
-    const board = document.getElementById("puzzleBoard");
-    board.innerHTML = "";
-
-    puzzleDeck.forEach((card, index) => {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = `puzzle-memory-card${card.revealed ? " revealed" : ""}${card.matched ? " matched" : ""}`;
-      button.disabled = card.matched || puzzleLocked;
-      button.addEventListener("click", () => flipPuzzleCard(index));
-
-      if (card.revealed || card.matched) {
-        button.innerHTML = `<span class="puzzle-card-type">${card.type}</span><span class="puzzle-card-value">${escapeHtml(card.value)}</span>`;
+  function renderTypingSnippet(snippet, typed) {
+    const container = document.getElementById("typingSnippet");
+    let html = "";
+    for (let i = 0; i < snippet.length; i++) {
+      const c = snippet[i] === "\n" ? "↵\n" : snippet[i];
+      let cls;
+      if (i < typed.length) {
+        cls = typed[i] === snippet[i] ? "char-correct" : "char-wrong";
+      } else if (i === typed.length) {
+        cls = "char-current";
       } else {
-        button.innerHTML = '<span class="puzzle-card-type">Hidden</span><span class="puzzle-card-value">?</span>';
+        cls = "char-pending";
       }
-
-      board.appendChild(button);
-    });
-  }
-
-  function renderPuzzle() {
-    const puzzle = puzzleData[currentPuzzleIndex];
-    document.getElementById("puzzleLevelNum").textContent = currentPuzzleIndex + 1;
-    document.getElementById("puzzleLevelTotal").textContent = puzzleData.length;
-    document.getElementById("puzzleXp").textContent = `+${puzzle.xp} XP`;
-    document.getElementById("puzzleTitle").textContent = puzzle.title;
-    document.getElementById("puzzleDifficulty").textContent = puzzle.difficulty;
-    document.getElementById("puzzleDescription").textContent = puzzle.description;
-    document.getElementById("puzzleHint").textContent = puzzle.hint;
-    document.getElementById("puzzleHint").style.display = "none";
-    document.getElementById("puzzleResult").textContent = "";
-    document.getElementById("puzzleResult").className = "activity-result";
-    document.getElementById("puzzleCompletedBadge").style.display = appState.completedPuzzles.includes(currentPuzzleIndex) ? "inline-flex" : "none";
-
-    const levelButtons = document.getElementById("puzzleLevelButtons");
-    levelButtons.innerHTML = puzzleData.map((_, index) => `
-      <button
-        class="puzzle-level-btn ${isPuzzleUnlocked(index) ? "unlocked" : "locked"} ${index === currentPuzzleIndex ? "active" : ""} ${appState.completedPuzzles.includes(index) ? "completed" : ""}"
-        onclick="setPuzzleLevel(${index})"
-        ${isPuzzleUnlocked(index) ? "" : "disabled"}
-        aria-label="Level ${index + 1} ${isPuzzleUnlocked(index) ? (appState.completedPuzzles.includes(index) ? "completed" : "unlocked") : "locked"}"
-      >
-        <span class="puzzle-level-num">${index + 1}</span>
-        <span class="puzzle-level-state">${appState.completedPuzzles.includes(index) ? "Done" : isPuzzleUnlocked(index) ? "Open" : "Locked"}</span>
-      </button>
-    `).join("");
-
-    puzzleMoves = 0;
-    puzzleMatchedPairs = 0;
-    puzzleFlippedCards = [];
-    puzzleLocked = false;
-    stopPuzzleTimer();
-    puzzleStartedAt = Date.now();
-    createPuzzleDeck();
-    renderPuzzleBoard();
-    updatePuzzleStats();
-    puzzleTimer = setInterval(updatePuzzleStats, 1000);
-  }
-
-  function setPuzzleLevel(index) {
-    if (!isPuzzleUnlocked(index)) {
-      showNotification("Finish the previous level to unlock this one.", "info");
-      return;
+      html += `<span class="${cls}">${c}</span>`;
     }
-
-    currentPuzzleIndex = index;
-    renderPuzzle();
+    container.innerHTML = html;
   }
 
-  // Level navigation happens via the level map buttons.
+  function finishTyping() {
+    clearInterval(typingState.timer);
+    typingState.active = false;
+    document.getElementById("typingInput").disabled = true;
 
-  function togglePuzzleHint() {
-    const hint = document.getElementById("puzzleHint");
-    hint.style.display = hint.style.display === "block" ? "none" : "block";
-  }
+    const elapsed = (Date.now() - typingState.startTime) / 1000 / 60;
+    const wpm = elapsed > 0 ? Math.round((typingState.correctChars / 5) / elapsed) : 0;
+    const accuracy = typingState.totalChars > 0 ? Math.round((typingState.correctChars / typingState.totalChars) * 100) : 0;
+    const xpGain = Math.round(wpm * 2);
 
-  function resetPuzzleLevel() {
-    renderPuzzle();
-  }
-
-  function completePuzzleLevel() {
-    stopPuzzleTimer();
-    const puzzle = puzzleData[currentPuzzleIndex];
-    const result = document.getElementById("puzzleResult");
-    result.textContent = `Board cleared in ${puzzleMoves} moves. You earned +${puzzle.xp} XP.`;
-    result.className = "activity-result success";
-
-    if (!appState.completedPuzzles.includes(currentPuzzleIndex)) {
-      appState.completedPuzzles.push(currentPuzzleIndex);
-      appState.xp += puzzle.xp;
+    if (wpm > appState.typingHighScore) {
+      appState.typingHighScore = wpm;
     }
-
-    document.getElementById("puzzleCompletedBadge").style.display = "inline-flex";
+    if (xpGain > 0) {
+      appState.xp += xpGain;
+      logXpEarned(xpGain);
+      showXpPopup(xpGain);
+    }
     updateDashboard();
-    renderPuzzleBoard();
-  }
 
-  function flipPuzzleCard(index) {
-    const card = puzzleDeck[index];
-    if (!card || card.matched || card.revealed || puzzleLocked) {
-      return;
-    }
-
-    card.revealed = true;
-    puzzleFlippedCards.push(index);
-    renderPuzzleBoard();
-
-    if (puzzleFlippedCards.length < 2) {
-      return;
-    }
-
-    puzzleMoves += 1;
-    updatePuzzleStats();
-    const [firstIndex, secondIndex] = puzzleFlippedCards;
-    const firstCard = puzzleDeck[firstIndex];
-    const secondCard = puzzleDeck[secondIndex];
-
-    if (firstCard.pairId === secondCard.pairId && firstCard.type !== secondCard.type) {
-      firstCard.matched = true;
-      secondCard.matched = true;
-      puzzleMatchedPairs += 1;
-      puzzleFlippedCards = [];
-      renderPuzzleBoard();
-      updatePuzzleStats();
-
-      if (puzzleMatchedPairs === puzzleData[currentPuzzleIndex].pairs.length) {
-        completePuzzleLevel();
-      }
-      return;
-    }
-
-    puzzleLocked = true;
-    setTimeout(() => {
-      firstCard.revealed = false;
-      secondCard.revealed = false;
-      puzzleFlippedCards = [];
-      puzzleLocked = false;
-      renderPuzzleBoard();
-    }, 800);
+    const result = document.getElementById("typingResult");
+    result.style.display = "block";
+    const textEl = document.getElementById("typingResultText");
+    if (textEl) textEl.innerHTML = `<strong>Finished!</strong> WPM: ${wpm} | Accuracy: ${accuracy}% | XP Earned: +${xpGain}`;
+    result.className = "typing-result success";
   }
 
   async function initApp() {
     updateSecureSyncLabel(true);
     let secretBuffer = "";
+    window.addEventListener("message", (event) => {
+      if (event.data?.type === "console") {
+        const body = document.querySelector("#activityConsole .console-body");
+        if (body) {
+          const line = document.createElement("div");
+          line.textContent = event.data.data;
+          body.appendChild(line);
+          body.scrollTop = body.scrollHeight;
+        }
+      }
+    });
+
     window.addEventListener("keydown", (event) => {
       if (event.key === "Escape") {
         const settings = document.getElementById("settings");
@@ -4834,15 +5563,17 @@
     setAppLoading(true, "Connecting Firebase authentication and cloud progress.");
     document.body.classList.toggle("dark", appState.darkMode);
     document.body.classList.toggle("light", !appState.darkMode);
+    syncThemeButton();
     setupPhoneInputs();
     updateDashboard();
     syncSettingsUI();
     setupNavigationClicks();
 
-    renderPuzzle();
-    setupTypingGame();
-    updateRushStats();
-    showGamesMode("rush");
+    renderSprintIntro();
+    renderLinkUpSetup();
+    renderBugSetup();
+    renderTypingSetup();
+    showGamesMode("sprint");
     renderAvatar();
     syncAvatarPickerUI();
 
@@ -4913,9 +5644,9 @@
           await hydrateStateForUser(user);
           document.body.classList.toggle("dark", appState.darkMode);
           document.body.classList.toggle("light", !appState.darkMode);
+          syncThemeButton();
           syncSettingsUI();
           updateDashboard();
-          renderPuzzle();
           showMainInterface();
           showPage("dashboard");
           if (shouldCelebrate) {
@@ -4928,6 +5659,7 @@
           resetAppState();
           document.body.classList.toggle("dark", appState.darkMode);
           document.body.classList.toggle("light", !appState.darkMode);
+          syncThemeButton();
           syncSettingsUI();
           updateDashboard();
           showAuthInterface();
@@ -4975,17 +5707,23 @@
   window.submitQuiz = submitQuiz;
   window.switchLessonTab = switchLessonTab;
   window.getQuizData = async function() {
-    return [...getHTMLQuizData(), ...getJSQuizData()];
+    return [...getHTMLQuizData(), ...getJSQuizData(), ...getCSSQuizData()];
   };
   window.showNotification = showNotification;
   window.showGamesMode = showGamesMode;
-  window.startRushGame = startRushGame;
-  window.pauseRushGame = pauseRushGame;
-  window.skipRushQuestion = skipRushQuestion;
-  window.setRushDuration = setRushDuration;
-  window.startTypingTest = startTypingTest;
-  window.pauseTypingTest = pauseTypingTest;
-  window.setTypingDuration = setTypingDuration;
+  window.renderSprintIntro = renderSprintIntro;
+  window.startSprint = startSprint;
+  window.answerSprint = answerSprint;
+  window.renderLinkUpSetup = renderLinkUpSetup;
+  window.startLinkUp = startLinkUp;
+  window.selectLinkLeft = selectLinkLeft;
+  window.selectLinkRight = selectLinkRight;
+  window.renderBugSetup = renderBugSetup;
+  window.startBugHunt = startBugHunt;
+  window.selectBugFix = selectBugFix;
+  window.nextBug = nextBug;
+  window.renderTypingSetup = renderTypingSetup;
+  window.startTyping = startTyping;
   window.sendEmailVerificationCode = sendEmailVerificationCode;
   window.verifyEmailCode = verifyEmailCode;
   window.sendPhoneVerificationCode = sendPhoneVerificationCode;
@@ -4993,15 +5731,14 @@
   window.changePassword = changePassword;
   window.exportAccountData = exportAccountData;
   window.clearLocalData = clearLocalData;
-  window.togglePuzzleHint = togglePuzzleHint;
-  window.resetPuzzleLevel = resetPuzzleLevel;
+
   function filterHtmlLessons(level) {
     const list = document.getElementById("lessonHtmlList");
     if (!list) return;
 
-    const cards = Array.from(list.querySelectorAll(".topic-card[data-html-level]"));
+    const cards = Array.from(list.querySelectorAll(".topic-card"));
     cards.forEach((card) => {
-      const cardLevel = card.getAttribute("data-html-level");
+      const cardLevel = card.getAttribute("data-difficulty");
       const show = level === "all" || cardLevel === level;
       card.style.display = show ? "" : "none";
     });
@@ -5161,7 +5898,7 @@
   window.openHtmlTopicActivity = openHtmlTopicActivity;
   window.runHtmlTopicPreview = runHtmlTopicPreview;
 
-  window.setPuzzleLevel = setPuzzleLevel;
+
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", initApp);

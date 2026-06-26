@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CodeLab | Professional HTML Learning Hub</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material-darker.min.css">
 <link rel="stylesheet" href="style.css">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta name="description" content="CodeLab - Learn HTML through interactive lessons, quizzes, Tetris game, and gamified progression">
@@ -218,22 +220,22 @@
     
     <!-- Navigation -->
     <nav class="nav-links">
-      <button type="button" data-page="dashboard" onclick="showPage('dashboard')" class="nav-btn active">
+      <button type="button" data-page="dashboard" class="nav-btn active">
         <span>📊</span> Dashboard
       </button>
 
-      <button type="button" data-page="lessons" onclick="showPage('lessons')" class="nav-btn">
+      <button type="button" data-page="lessons" class="nav-btn">
         <span>📚</span> Lessons
       </button>
 
-      <button type="button" data-page="quizzes" onclick="showPage('quizzes')" class="nav-btn">
+      <button type="button" data-page="quizzes" class="nav-btn">
         <span>🧠</span> Quizzes
       </button>
 
-      <button type="button" data-page="achievements" onclick="showPage('achievements')" class="nav-btn">
+      <button type="button" data-page="achievements" class="nav-btn">
         <span>🏆</span> Achievements
       </button>
-      <button type="button" data-page="games" onclick="showPage('games')" class="nav-btn">
+      <button type="button" data-page="games" class="nav-btn">
         <span>🎮</span> Games
       </button>
     </nav>
@@ -382,16 +384,6 @@
           <span class="slider"></span>
         </label>
       </div>
-      <div class="setting-item">
-        <div>
-          <strong>Sound Effects</strong>
-          <p>Enable simple feedback sounds for games and achievements.</p>
-        </div>
-        <label class="switch">
-          <input type="checkbox" id="soundEffectsToggle" onchange="toggleSetting('soundEffects')">
-          <span class="slider"></span>
-        </label>
-      </div>
     </div>
 
     <div class="settings-section">
@@ -460,7 +452,6 @@
           <ul class="support-list">
             <li>Verify your email/phone to secure your profile.</li>
             <li>Use Export Data before clearing local data.</li>
-            <li>Turn on Sound Effects for game feedback.</li>
           </ul>
         </div>
       </div>
@@ -564,6 +555,13 @@
         </div>
       </div>
 
+      <div class="category-progress" id="categoryProgress">
+        <div class="category-progress-header">Category Progress</div>
+        <div class="category-progress-row"><span>HTML</span><div class="progress mini"><div class="bar" id="catProgHtml"></div></div><strong id="catProgHtmlLabel">0%</strong></div>
+        <div class="category-progress-row"><span>JS</span><div class="progress mini"><div class="bar" id="catProgJs"></div></div><strong id="catProgJsLabel">0%</strong></div>
+        <div class="category-progress-row"><span>CSS</span><div class="progress mini"><div class="bar" id="catProgCss"></div></div><strong id="catProgCssLabel">0%</strong></div>
+      </div>
+
       <script>
         // Placeholder: overwritten by script.js once app initializes.
         // This avoids broken onclick references during early load.
@@ -604,14 +602,14 @@ function continueLearning() {
             <p>How much progress remains before leveling up.</p>
           </div>
           <div class="analytics-card">
-            <span class="analytics-label">Typing Peak</span>
-            <strong id="analyticsTypingPeak">0 WPM</strong>
-            <p>Your best recorded typing speed so far.</p>
+            <span class="analytics-label">Game Score</span>
+            <strong id="analyticsGameScore">0 pts</strong>
+            <p>Your best Code Sprint score so far.</p>
           </div>
           <div class="analytics-card">
-            <span class="analytics-label">Puzzle Progress</span>
-            <strong id="analyticsPuzzleProgress">0/0</strong>
-            <p>Completed HTML puzzles across all available levels.</p>
+            <span class="analytics-label">Topics Completed</span>
+            <strong id="analyticsTopicsCompleted">0/0</strong>
+            <p>Learning topics completed out of all available lessons.</p>
           </div>
         </div>
       <div class="analytics-strip">
@@ -656,7 +654,7 @@ function continueLearning() {
             <div class="chart-card-header">
               <div>
                 <h5>Performance Mix</h5>
-                <p>Current strength across lessons, puzzles, typing, and quizzes.</p>
+                <p>Current strength across lessons, games, typing, and quizzes.</p>
               </div>
             </div>
             <div class="bar-chart">
@@ -666,9 +664,9 @@ function continueLearning() {
                 <strong id="analyticsBarLessonsValue">0%</strong>
               </div>
               <div class="bar-row">
-                <span>Puzzles</span>
-                <div class="bar-track"><div id="analyticsBarPuzzles" class="bar-fill"></div></div>
-                <strong id="analyticsBarPuzzlesValue">0%</strong>
+                <span>Games</span>
+                <div class="bar-track"><div id="analyticsBarGames" class="bar-fill"></div></div>
+                <strong id="analyticsBarGamesValue">0%</strong>
               </div>
               <div class="bar-row">
                 <span>Typing</span>
@@ -701,10 +699,30 @@ function continueLearning() {
       <div class="lessons-tabs">
         <button type="button" class="editor-tab active" data-lesson-tab="html" onclick="switchLessonTab('html')">HTML</button>
         <button type="button" class="editor-tab" data-lesson-tab="js" onclick="switchLessonTab('js')">JavaScript</button>
+        <button type="button" class="editor-tab" data-lesson-tab="css" onclick="switchLessonTab('css')">CSS</button>
+      </div>
+
+      <div class="difficulty-filters">
+        <button type="button" class="filter-btn active" data-filter="all" onclick="setDifficultyFilter('all')">All</button>
+        <button type="button" class="filter-btn" data-filter="Beginner" onclick="setDifficultyFilter('Beginner')">Beginner</button>
+        <button type="button" class="filter-btn" data-filter="Intermediate" onclick="setDifficultyFilter('Intermediate')">Intermediate</button>
+        <button type="button" class="filter-btn" data-filter="Advanced" onclick="setDifficultyFilter('Advanced')">Advanced</button>
+        <input type="text" class="search-input" id="lessonSearch" placeholder="Search lessons..." oninput="setLessonSearch(this.value)">
       </div>
 
       <div id="topicGrid" class="topic-grid"></div>
+      <div id="topicSkeleton" class="skeleton-grid" style="display:none;">
+        <div class="skeleton-card"></div>
+        <div class="skeleton-card"></div>
+        <div class="skeleton-card"></div>
+      </div>
+      <div id="emptyState" class="empty-state" style="display:none;">
+        <div class="empty-state-icon">🔍</div>
+        <h4>No lessons found</h4>
+        <p>Try a different search or clear the filters.</p>
+      </div>
       <div id="topicGridJS" class="topic-grid" style="display:none;"></div>
+      <div id="topicGridCSS" class="topic-grid" style="display:none;"></div>
 
       <div id="lessonDetail" class="lesson-detail-view" style="display:none;">
         <div class="lesson-detail-header">
@@ -755,6 +773,7 @@ function continueLearning() {
               <div id="activityHint" class="activity-hint" style="display:none;"></div>
             </div>
             <iframe id="activityOutput" title="Activity Preview"></iframe>
+            <div id="activityConsole" class="activity-console" style="display:none;"><div class="console-header">Console Output</div><div class="console-body"></div></div>
           </div>
         </div>
       </div>
@@ -797,155 +816,50 @@ function continueLearning() {
       <div class="achievements-grid"></div>
     </div>
 
-    <!-- GAMES PAGE - NEW -->
+    <!-- GAMES PAGE -->
     <div class="card page" id="games">
       <div class="page-header">
         <h3>🎮 Games Hub</h3>
         <span class="badge">Earn XP • Level Up</span>
       </div>
-      
+
       <!-- Games Tabs -->
       <div class="games-tabs">
-        <button class="editor-tab active" onclick="showGamesMode('rush')">🏷️ Tag Rush</button>
-        <button class="editor-tab" onclick="showGamesMode('typing')">⌨️ Typing</button>
-        <button class="editor-tab" onclick="showGamesMode('puzzle')">🧩 Puzzles</button>
+        <button class="editor-tab active" onclick="showGamesMode('sprint')">🏃 Code Sprint</button>
+        <button class="editor-tab" onclick="showGamesMode('linkup')">🔗 Link Up</button>
+        <button class="editor-tab" onclick="showGamesMode('bug')">🐛 Spot the Bug</button>
+        <button class="editor-tab" onclick="showGamesMode('typing')">⌨️ Typing Speed</button>
       </div>
 
-      <!-- Tag Rush Game -->
-      <div id="gamesRush" class="game-section active">
-        <div class="game-header">
-          <h4>🏷️ Tag Rush</h4>
-          <div class="game-stats">
-            <span>Score: <span id="rushScore">0</span></span>
-            <span>Streak: <span id="rushStreak">0</span></span>
-            <span>Level: <span id="rushLevel">1</span></span>
-            <span>Time: <span id="rushTime">45s</span></span>
-          </div>
-        </div>
-        <div class="typing-options">
-          <label for="rushDurationSelect">Round Length</label>
-          <select id="rushDurationSelect" onchange="setRushDuration(this.value)">
-            <option value="30">30 seconds</option>
-            <option value="45" selected>45 seconds</option>
-            <option value="60">1 minute</option>
-            <option value="120">2 minutes</option>
-          </select>
-        </div>
-        <div class="rush-board">
-          <div class="rush-card">
-            <span class="rush-label">Choose the best HTML tag</span>
-            <h5 id="rushPromptTitle">Press start to begin</h5>
-            <p id="rushPromptText">You will get quick prompts about page structure, semantics, and media elements.</p>
-          </div>
-          <div class="rush-options" id="rushOptions"></div>
-        </div>
-        <div id="rushResult" class="activity-result" style="display:none;"></div>
-        <div class="typing-actions">
-          <button class="btn-primary" id="rushStartBtn" onclick="startRushGame()">▶ Start Round (45s)</button>
-          <button class="btn-secondary" id="rushPauseBtn" onclick="pauseRushGame()" style="display:none;">⏸️ Pause</button>
-          <button class="btn-secondary" onclick="skipRushQuestion()">⏭ Skip</button>
-        </div>
-        <div class="game-controls">
-          <p>Answer quickly to build streaks, increase score, and sharpen your HTML tag instincts.</p>
-        </div>
+      <!-- Code Sprint -->
+      <div id="gamesSprint" class="game-section active">
+        <div id="sprintArea"></div>
       </div>
 
-      <!-- Typing Game -->
+      <!-- Link Up -->
+      <div id="gamesLinkup" class="game-section">
+        <div id="linkUpArea"></div>
+      </div>
+
+      <!-- Spot the Bug -->
+      <div id="gamesBug" class="game-section">
+        <div id="bugArea"></div>
+      </div>
+
+      <!-- Typing Speed -->
       <div id="gamesTyping" class="game-section">
-        <div class="game-header">
-          <h4>⌨️ Typing Speed Test</h4>
-          <div class="typing-stats">
-            <span>WPM: <span id="typingWPM">0</span></span>
-            <span>Accuracy: <span id="typingAccuracy">0</span>%</span>
-            <span>Level: <span id="typingLevel">1</span></span>
+        <div id="typingArea">
+          <div id="typingSetup">
+            <p>Type the code snippet as fast and accurately as you can. Press <strong>Start</strong> to begin.</p>
+            <button type="button" class="btn-primary" onclick="startTyping()">▶ Start Typing Test</button>
           </div>
-        </div>
-        <div class="typing-meta">
-          <span>Time Left: <strong id="typingTimeLeft">60s</strong></span>
-          <span>Characters: <strong id="typingChars">0</strong></span>
-          <span>Words Completed: <strong id="typingWordsDone">0</strong></span>
-        </div>
-        <div class="typing-options">
-          <label for="typingDurationSelect">Duration</label>
-          <select id="typingDurationSelect" onchange="setTypingDuration(this.value)">
-            <option value="15">15 seconds</option>
-            <option value="30">30 seconds</option>
-            <option value="60" selected>1 minute</option>
-            <option value="120">2 minutes</option>
-            <option value="300">5 minutes</option>
-          </select>
-        </div>
-        <div id="typingDisplay" class="typing-display">Click "Start Test" to begin →</div>
-        <div class="typing-progress">
-          <div id="typingProgressBar"></div>
-        </div>
-        <input type="text" id="typingInput" placeholder="Type the CSS words above..." disabled>
-        <div class="typing-actions">
-          <button class="btn-primary" id="typingStartBtn" onclick="startTypingTest()">▶ Start Test (60s)</button>
-          <button class="btn-secondary" id="typingPauseBtn" onclick="pauseTypingTest()" style="display:none;">⏸️ Pause</button>
-        </div>
-        <div id="typingResult" class="activity-result" style="display:none;"></div>
-        <div id="typingResultsGrid" class="typing-results-grid" style="display:none;">
-          <div class="typing-result-card">
-            <span>Net WPM</span>
-            <strong id="typingResultWpm">0</strong>
-          </div>
-          <div class="typing-result-card">
-            <span>WPS</span>
-            <strong id="typingResultWps">0.0</strong>
-          </div>
-          <div class="typing-result-card">
-            <span>Accuracy</span>
-            <strong id="typingResultAccuracy">0%</strong>
-          </div>
-          <div class="typing-result-card">
-            <span>Correct Chars</span>
-            <strong id="typingResultCorrectChars">0</strong>
-          </div>
-          <div class="typing-result-card">
-            <span>Total Chars</span>
-            <strong id="typingResultTotalChars">0</strong>
-          </div>
-          <div class="typing-result-card">
-            <span>Time Used</span>
-            <strong id="typingResultTimeUsed">0s</strong>
-          </div>
-        </div>
-      </div>
-
-      <!-- Puzzle Game -->
-      <div id="gamesPuzzle" class="game-section">
-        <div class="game-header">
-          <h4>🧠 Semantic Match</h4>
-          <span>Level <span id="puzzleLevelNum">1</span>/<span id="puzzleLevelTotal">1</span> • <span id="puzzleXp">+10 XP</span></span>
-        </div>
-
-        <div class="puzzle-nav-row">
-          <div id="puzzleLevelButtons"></div>
-        </div>
-
-        <div class="puzzle-layout">
-          <div class="puzzle-info-panel">
-            <h5 id="puzzleTitle">Semantic Match</h5>
-            <p id="puzzleDifficulty" class="puzzle-difficulty">Beginner</p>
-            <p id="puzzleDescription">Flip cards and match each HTML tag with the right meaning.</p>
-            <span id="puzzleCompletedBadge" class="badge" style="display:none;">✅ Completed</span>
-            <div class="typing-meta puzzle-meta">
-              <span>Moves: <strong id="puzzleMoves">0</strong></span>
-              <span>Matches: <strong id="puzzleMatches">0</strong></span>
-              <span>Time: <strong id="puzzleTimer">0s</strong></span>
-            </div>
-            <button onclick="togglePuzzleHint()" class="btn-secondary" style="margin-top:12px;">💡 Show Hint</button>
-            <div id="puzzleHint" class="activity-hint" style="display:none;"></div>
-          </div>
-
-          <div class="puzzle-play-panel">
-            <div class="puzzle-toolbar">
-              <strong>Match every tag to its purpose</strong>
-              <button onclick="resetPuzzleLevel()" class="btn-secondary">🔄 Reset Board</button>
-            </div>
-            <div id="puzzleBoard" class="puzzle-board"></div>
-            <div id="puzzleResult" class="activity-result"></div>
+            <div id="typingGame" style="display:none;">
+              <div id="typingSnippet" class="typing-snippet"></div>
+              <textarea id="typingInput" class="typing-input" spellcheck="false" placeholder="Type the code here..."></textarea>
+              <div id="typingResult" class="typing-result" style="display:none;">
+                <div id="typingResultText"></div>
+                <button type="button" class="btn-primary" onclick="startTyping()" style="margin-top:12px">Try Again</button>
+              </div>
           </div>
         </div>
       </div>
@@ -957,9 +871,13 @@ function continueLearning() {
 <script type="module" src="firebase-init.js"></script>
 
 <script src="script.js"></script>
-<!-- achievements-fixed.js removed - merged into script.js -->
-<!-- challenges.js merged into script.js -->
-
-
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/xml/xml.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/css/css.min.js"></script>
+<script>
+  window.codeMirrorLoaded = true;
+  if (window.afterCodeMirrorReady) window.afterCodeMirrorReady();
+</script>
 </body>
 </html>
