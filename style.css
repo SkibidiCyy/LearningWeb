@@ -3704,10 +3704,11 @@ iframe#activityOutput {
   padding: 10px 14px;
   border-radius: var(--radius-xs);
   border: 1px solid var(--border);
-  background: rgba(0,0,0,0.2);
+  background: var(--surface-strong);
   color: var(--text);
   font-size: 0.9rem;
   min-width: 160px;
+  appearance: auto;
 }
 
 /* Shake animation for wrong answers */
