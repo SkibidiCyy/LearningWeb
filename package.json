@@ -1,0 +1,14 @@
+{
+  "name": "codelab",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Interactive platform for learning HTML, CSS, and JavaScript",
+  "scripts": {
+    "start": "npx serve .",
+    "dev": "npx live-server --port=3000 --no-browser --ignore=sw.js"
+  },
+  "devDependencies": {
+    "live-server": "^1.2.2",
+    "serve": "^14.2.0"
+  }
+}

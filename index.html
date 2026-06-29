@@ -13,7 +13,7 @@
 <meta name="theme-color" content="#0d1b2d">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<!-- Manifest disabled for local CORS -->
+<link rel="manifest" href="manifest.json">
 <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
   <symbol id="icon-computer" viewBox="0 0 24 24">
     <path d="M20 18c1.1 0 2-.9 2 2V6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v10c0 1.1 .9 2 2 2H0v2h24v-2h-4zM4 6h16v10H4V6z"></path>
@@ -71,7 +71,7 @@
           <label>Password</label>
           <input id="loginPassword" type="password" placeholder="Enter password" autocomplete="current-password">
         </div>
-        <button class="btn-primary auth-action-btn" id="loginButton" onclick="login()">Login</button>
+        <button class="btn-primary auth-action-btn" id="loginButton" data-action="login">Login</button>
         <p id="loginStatus" class="status-msg"></p>
         <div class="auth-divider"><span>Or continue with phone</span></div>
         <div class="phone-auth-card">
@@ -84,16 +84,16 @@
             <input id="loginPhoneCode" type="text" inputmode="numeric" maxlength="6" placeholder="Enter 6-digit code">
           </div>
           <div class="phone-auth-actions">
-            <button class="btn-secondary" type="button" onclick="sendPhoneAuthCode('login')">Send Code</button>
-            <button class="btn-primary" type="button" onclick="confirmPhoneAuthCode('login')">Verify & Login</button>
+            <button class="btn-secondary" type="button" data-action="sendPhoneAuthCode" data-param="login">Send Code</button>
+            <button class="btn-primary" type="button" data-action="confirmPhoneAuthCode" data-param="login">Verify & Login</button>
           </div>
           <div id="loginPhoneRecaptcha" class="phone-recaptcha"></div>
           <p id="loginPhoneStatus" class="status-msg"></p>
         </div>
         <div class="actions">
-          <a href="#" onclick="forgotPassword()">Forgot Password?</a>
+          <a href="#" data-action="forgotPassword">Forgot Password?</a>
         </div>
-        <p class="switch-text">No account yet? <a href="#" onclick="showAuthTab('signup'); return false;">Create one</a></p>
+        <p class="switch-text">No account yet? <a href="#" data-action="showAuthTab" data-param="signup">Create one</a></p>
       </div>
     </div>
     
@@ -121,7 +121,7 @@
           <label>Confirm Password</label>
           <input id="signupConfirm" type="password" placeholder="Repeat password" autocomplete="new-password">
         </div>
-        <button class="btn-primary auth-action-btn" id="signupButton" onclick="register()">Create Account</button>
+        <button class="btn-primary auth-action-btn" id="signupButton" data-action="register">Create Account</button>
         <p id="signupStatus" class="status-msg"></p>
         <div class="auth-divider"><span>Or sign up with phone</span></div>
         <div class="phone-auth-card">
@@ -134,13 +134,13 @@
             <input id="signupPhoneCode" type="text" inputmode="numeric" maxlength="6" placeholder="Enter 6-digit code">
           </div>
           <div class="phone-auth-actions">
-            <button class="btn-secondary" type="button" onclick="sendPhoneAuthCode('signup')">Send Code</button>
-            <button class="btn-primary" type="button" onclick="confirmPhoneAuthCode('signup')">Verify & Create</button>
+            <button class="btn-secondary" type="button" data-action="sendPhoneAuthCode" data-param="signup">Send Code</button>
+            <button class="btn-primary" type="button" data-action="confirmPhoneAuthCode" data-param="signup">Verify & Create</button>
           </div>
           <div id="signupPhoneRecaptcha" class="phone-recaptcha"></div>
           <p id="signupPhoneStatus" class="status-msg"></p>
         </div>
-        <p class="switch-text">Already have an account? <a href="#" onclick="showAuthTab('login'); return false;">Back to login</a></p>
+        <p class="switch-text">Already have an account? <a href="#" data-action="showAuthTab" data-param="login">Back to login</a></p>
       </div>
     </div>
       </section>
@@ -156,41 +156,80 @@
   <p id="successOverlayText">Success</p>
 </div>
 
-<!-- Complete Forgot Password Modal -->
-<div class="modal forgot-password-modal" id="forgotPasswordModal" style="display:none;">
+<!-- Complete Forgot Password Modal (OTP flow) -->
+<div class="modal forgot-password-modal" id="forgotPasswordModal" style="display:none;" onclick="if(event.target===this)closeForgotPasswordModal()">
   <div class="modal-content glass-panel forgot-panel">
     <div class="forgot-orb" aria-hidden="true"></div>
-    <div class="forgot-header">
-      <div class="forgot-badge-row">
-        <span class="auth-kicker">Account Recovery</span>
-        <span class="forgot-security-pill">Secure Reset</span>
-      </div>
-      <div class="logo-icon forgot-logo">🔒</div>
-      <h2>Reset your password</h2>
-      <p>Enter the email linked to your CodeLab account and we’ll send a secure reset link so you can get back in quickly.</p>
-    </div>
+
+    <!-- Step 1: Enter Email -->
     <div id="forgotStep1">
+      <div class="forgot-header">
+        <div class="forgot-badge-row">
+          <span class="auth-kicker">Account Recovery</span>
+          <span class="forgot-security-pill">Secure Reset</span>
+        </div>
+        <div class="logo-icon forgot-logo">🔒</div>
+        <h2>Reset your password</h2>
+        <p>Enter your email and we'll send a <strong>6-digit code</strong> to verify your account.</p>
+      </div>
       <div class="input-group">
         <label>Account Email</label>
         <input id="forgotEmailLRN" type="email" placeholder="Enter your account email" autocomplete="email">
       </div>
       <div class="forgot-actions">
-        <button class="btn-primary" id="resetPasswordButton" onclick="sendResetCode()">Send Reset Link</button>
-        <button class="btn-secondary forgot-close-inline" onclick="closeForgotPasswordModal()">Cancel</button>
-      </div>
-      <div class="forgot-note-list">
-        <div class="forgot-note-card">
-          <strong>Email delivery</strong>
-          <span>Check your inbox and spam folder for the reset link.</span>
-        </div>
-        <div class="forgot-note-card">
-          <strong>One account email</strong>
-          <span>Use the same email you signed up with in CodeLab.</span>
-        </div>
+        <button class="btn-primary" id="sendOtpButton" data-action="sendOtpCode">Send OTP</button>
+        <button class="btn-secondary" data-action="closeForgotPasswordModal">Cancel</button>
       </div>
       <p id="forgotStatus" class="forgot-status"></p>
     </div>
-    <button class="btn-secondary forgot-close-footer" onclick="closeForgotPasswordModal()">Close</button>
+
+    <!-- Step 2: Enter OTP (hidden by default) -->
+    <div id="forgotStep2" style="display:none;">
+      <div class="forgot-header">
+        <div class="forgot-badge-row">
+          <span class="auth-kicker">Verify Code</span>
+          <span class="forgot-security-pill" id="otpTimerPill">••••••</span>
+        </div>
+        <div class="logo-icon forgot-logo">✉️</div>
+        <h2>Check your email</h2>
+        <p>We sent a 6-digit code to <strong id="otpEmailDisplay"></strong>. Enter it below.</p>
+      </div>
+      <div class="otp-input-group">
+        <input id="otpInput" type="text" inputmode="numeric" maxlength="6" placeholder="000000" autocomplete="one-time-code" class="otp-field">
+      </div>
+      <div class="forgot-actions">
+        <button class="btn-primary" id="verifyOtpButton" data-action="verifyOtpCode">Verify Code</button>
+        <button class="btn-secondary" id="resendOtpButton" data-action="resendOtpCode" disabled>Resend code (<span id="resendTimer">30</span>s)</button>
+      </div>
+      <p id="otpStatus" class="forgot-status"></p>
+    </div>
+
+    <!-- Step 3: New Password (hidden by default) -->
+    <div id="forgotStep3" style="display:none;">
+      <div class="forgot-header">
+        <div class="forgot-badge-row">
+          <span class="auth-kicker">Code Verified</span>
+          <span class="forgot-security-pill">✅ Verified</span>
+        </div>
+        <div class="logo-icon forgot-logo">🔑</div>
+        <h2>Set a new password</h2>
+        <p>Choose a strong password for your CodeLab account.</p>
+      </div>
+      <div class="input-group">
+        <label>New Password</label>
+        <input id="otpNewPassword" type="password" placeholder="At least 6 characters" autocomplete="new-password">
+      </div>
+      <div class="input-group">
+        <label>Confirm Password</label>
+        <input id="otpConfirmPassword" type="password" placeholder="Repeat password" autocomplete="new-password">
+      </div>
+      <div class="forgot-actions">
+        <button class="btn-primary" id="resetPasswordWithOtpButton" data-action="resetPasswordWithOtp">Reset Password</button>
+        <button class="btn-secondary" data-action="closeForgotPasswordModal">Cancel</button>
+      </div>
+      <p id="resetPasswordStatus" class="forgot-status"></p>
+    </div>
+
   </div>
 </div>
 
@@ -238,229 +277,21 @@
       <button type="button" data-page="games" class="nav-btn">
         <span>🎮</span> Games
       </button>
+
+      <button type="button" data-action="toggleSettings" class="nav-btn">
+        <span>⚙️</span> Settings
+      </button>
     </nav>
     
     <!-- Footer -->
     <div class="sidebar-footer">
-      <button type="button" onclick="toggleSettings()" class="nav-btn">
-        <span>⚙️</span> Settings
-      </button>
-      <button type="button" onclick="logout()" class="nav-btn logout-btn">
+      <button type="button" data-action="logout" class="nav-btn logout-btn">
         <span>🚪</span> Logout
       </button>
     </div>
   </div>
 
-  <!-- Settings Overlay -->
-  <div class="settings-overlay" id="settingsOverlay" onclick="toggleSettings()" aria-hidden="true"></div>
-
-  <!-- Settings Panel -->
-  <div class="settings-card" id="settings" aria-hidden="true">
-    <div class="settings-header">
-      <div>
-        <h3>⚙️ Settings</h3>
-        <p>Manage your account, privacy, and learning preferences.</p>
-      </div>
-      <button class="settings-close" onclick="toggleSettings()" aria-label="Close settings">✕</button>
-    </div>
-
-    <div class="settings-section">
-      <h4>Profile</h4>
-      <div class="avatar-settings">
-        <div class="avatar-preview-panel">
-          <div class="user-avatar avatar-preview" id="settingsAvatarPreview" role="img" aria-label="Selected profile picture"></div>
-          <p>Choose a built-in avatar or upload your own photo.</p>
-        </div>
-        <div class="avatar-picker">
-          <button type="button" class="avatar-option active" data-avatar-choice="wave" onclick="selectAvatarPreset('wave')" aria-label="Select blue avatar"></button>
-          <button type="button" class="avatar-option" data-avatar-choice="sunset" onclick="selectAvatarPreset('sunset')" aria-label="Select warm avatar"></button>
-          <button type="button" class="avatar-option" data-avatar-choice="forest" onclick="selectAvatarPreset('forest')" aria-label="Select green avatar"></button>
-        </div>
-        <div class="avatar-upload-row">
-          <label class="btn-secondary avatar-upload-btn" for="avatarUpload">Upload Picture</label>
-          <input id="avatarUpload" type="file" accept="image/*" onchange="handleAvatarUpload(event)">
-          <button type="button" class="btn-secondary" onclick="clearCustomAvatar()">Remove Custom Photo</button>
-        </div>
-      </div>
-      <div class="form-grid settings-form-grid">
-        <div class="input-group has-label">
-          <label>Nickname</label>
-          <input id="nickname" value="Demo User">
-        </div>
-        <div class="input-group has-label">
-          <label>Account Email</label>
-          <input id="email" value="" readonly>
-        </div>
-        <div class="input-group has-label">
-          <label>Phone</label>
-          <input id="phone" value="" placeholder="09xxxxxxxxx" inputmode="numeric" maxlength="11" pattern="09[0-9]{9}">
-        </div>
-        <div class="input-group has-label full-width">
-          <label>Bio</label>
-          <textarea id="bio">Learning HTML!</textarea>
-        </div>
-      </div>
-
-      <div class="verification-grid">
-        <div class="verify-card">
-          <div class="verify-head">
-            <strong>Email Verification</strong>
-            <span id="emailVerifyBadge" class="verify-badge">Unverified</span>
-          </div>
-          <div class="verify-actions" id="emailVerifyActions">
-            <button class="btn-secondary" type="button" onclick="sendEmailVerificationCode()">Send Verification Email</button>
-          </div>
-          <p id="emailVerifyHelp" class="verify-help"></p>
-        </div>
-
-        <div class="verify-card">
-          <div class="verify-head">
-            <strong>Phone Verification</strong>
-            <span id="phoneVerifyBadge" class="verify-badge">Unverified</span>
-          </div>
-          <div class="verify-actions">
-            <button class="btn-secondary" type="button" onclick="sendPhoneVerificationCode()">Send Code</button>
-            <input id="phoneVerifyCode" type="text" inputmode="numeric" maxlength="6" placeholder="6-digit code">
-            <button class="btn-primary" type="button" onclick="verifyPhoneCode()">Verify</button>
-          </div>
-          <p id="phoneVerifyHelp" class="verify-help"></p>
-        </div>
-      </div>
-
-      <div class="profile-actions settings-actions">
-        <button class="btn-primary" onclick="saveProfile()">Save Profile</button>
-        <p id="profileStatus"></p>
-      </div>
-    </div>
-
-    <div class="settings-section">
-      <h4>Appearance</h4>
-      <div class="setting-item">
-        <div>
-          <strong>Dark Mode</strong>
-          <p>Switch between light and dark workspace styles.</p>
-        </div>
-        <label class="switch">
-          <input type="checkbox" id="darkModeToggle" checked onchange="toggleDark()">
-          <span class="slider"></span>
-        </label>
-      </div>
-    </div>
-
-    <div class="settings-section">
-      <h4>Security</h4>
-      <div class="setting-item">
-        <div>
-          <strong>Session Lock</strong>
-          <p>Require re-entry to continue after inactivity.</p>
-        </div>
-        <label class="switch">
-          <input type="checkbox" id="sessionLockToggle" onchange="toggleSetting('sessionLock')">
-          <span class="slider"></span>
-        </label>
-      </div>
-      <div class="setting-item">
-        <div>
-          <strong>Login Alerts</strong>
-          <p>Show alerts when the account is accessed on this device.</p>
-        </div>
-        <label class="switch">
-          <input type="checkbox" id="loginAlertsToggle" onchange="toggleSetting('loginAlerts')">
-          <span class="slider"></span>
-        </label>
-      </div>
-      <button class="btn-secondary settings-full-btn" onclick="forgotPassword()">Reset Password</button>
-    </div>
-
-    <div class="settings-section">
-      <h4>Learning</h4>
-      <div class="setting-item">
-        <div>
-          <strong>Hints</strong>
-          <p>Keep lesson hints available while practicing.</p>
-        </div>
-        <label class="switch">
-          <input type="checkbox" id="lessonHintsToggle" onchange="toggleSetting('lessonHints')">
-          <span class="slider"></span>
-        </label>
-      </div>
-    </div>
-
-    <div class="settings-section">
-      <h4>Account</h4>
-      <div class="form-grid settings-form-grid">
-        <div class="input-group has-label">
-          <label>Current Password</label>
-          <input id="currentPassword" type="password" placeholder="Enter current password">
-        </div>
-        <div class="input-group has-label">
-          <label>New Password</label>
-          <input id="newPassword" type="password" placeholder="At least 6 characters">
-        </div>
-        <div class="input-group has-label full-width">
-          <label>Confirm New Password</label>
-          <input id="confirmNewPassword" type="password" placeholder="Repeat new password">
-        </div>
-      </div>
-      <div class="profile-actions settings-actions">
-        <button class="btn-primary" type="button" onclick="changePassword()">Change Password</button>
-        <button class="btn-secondary" type="button" onclick="exportAccountData()">Export Data</button>
-        <button class="btn-danger" type="button" onclick="clearLocalData()">Clear Local Data</button>
-        <p id="accountStatus" class="status-msg"></p>
-      </div>
-    </div>
-
-    <div class="settings-section">
-      <h4>Support</h4>
-      <div class="support-grid">
-        <div class="support-card">
-          <div class="support-head">
-            <strong>Contact CodeLab</strong>
-            <span class="badge">Help</span>
-          </div>
-          <div class="support-items">
-            <a class="support-item" href="mailto:CodeLab@gmail.com">
-              <span class="support-icon">✉</span>
-              <span>
-                <span class="support-label">Email</span>
-                <span class="support-value">CodeLab@gmail.com</span>
-              </span>
-            </a>
-            <a class="support-item" href="tel:+639243243243">
-              <span class="support-icon">☎</span>
-              <span>
-                <span class="support-label">Phone (PH)</span>
-                <span class="support-value">+63 924 324 3243</span>
-              </span>
-            </a>
-          </div>
-          <div class="support-actions">
-            <a class="btn-secondary support-btn" href="mailto:CodeLab@gmail.com?subject=CodeLab%20Support%20Request&body=Hi%20CodeLab%2C%0A%0A%28Describe%20your%20issue%20here%29%0A%0AUsername%3A%20">
-              Report a Bug
-            </a>
-            <a class="btn-secondary support-btn" href="mailto:CodeLab@gmail.com?subject=Feature%20Request%20for%20CodeLab&body=Hi%20CodeLab%2C%0A%0AI%20want%20to%20suggest%3A%20">
-              Suggest a Feature
-            </a>
-          </div>
-        </div>
-
-        <div class="support-card">
-          <div class="support-head">
-            <strong>Tips</strong>
-            <span class="badge">Quick</span>
-          </div>
-          <ul class="support-list">
-            <li>Verify your email/phone to secure your profile.</li>
-            <li>Use Export Data before clearing local data.</li>
-          </ul>
-        </div>
-      </div>
-    </div>
-
-    <div class="settings-footer">
-      <button class="btn-danger settings-full-btn" onclick="logout()">Logout</button>
-    </div>
-  </div>
+  <!-- Main Content -->
 
   <!-- Main Content -->
   <div class="main">
@@ -508,7 +339,7 @@
           </div>
 
           <div class="hero-cta-row">
-            <button class="btn-primary dashboard-cta" type="button" id="continueLearningBtn" onclick="continueLearning()">
+            <button class="btn-primary dashboard-cta" type="button" id="continueLearningBtn" data-action="continueLearning">
               ▶ Continue Learning
             </button>
             <div class="hero-cta-note">Next up: practice a lesson topic or jump into a quick puzzle.</div>
@@ -697,16 +528,16 @@ function continueLearning() {
       </div>
 
       <div class="lessons-tabs">
-        <button type="button" class="editor-tab active" data-lesson-tab="html" onclick="switchLessonTab('html')">HTML</button>
-        <button type="button" class="editor-tab" data-lesson-tab="js" onclick="switchLessonTab('js')">JavaScript</button>
-        <button type="button" class="editor-tab" data-lesson-tab="css" onclick="switchLessonTab('css')">CSS</button>
+        <button type="button" class="editor-tab active" data-lesson-tab="html" data-action="switchLessonTab" data-param="html">HTML</button>
+        <button type="button" class="editor-tab" data-lesson-tab="js" data-action="switchLessonTab" data-param="js">JavaScript</button>
+        <button type="button" class="editor-tab" data-lesson-tab="css" data-action="switchLessonTab" data-param="css">CSS</button>
       </div>
 
       <div class="difficulty-filters">
-        <button type="button" class="filter-btn active" data-filter="all" onclick="setDifficultyFilter('all')">All</button>
-        <button type="button" class="filter-btn" data-filter="Beginner" onclick="setDifficultyFilter('Beginner')">Beginner</button>
-        <button type="button" class="filter-btn" data-filter="Intermediate" onclick="setDifficultyFilter('Intermediate')">Intermediate</button>
-        <button type="button" class="filter-btn" data-filter="Advanced" onclick="setDifficultyFilter('Advanced')">Advanced</button>
+        <button type="button" class="filter-btn active" data-filter="all" data-action="setDifficultyFilter" data-param="all">All</button>
+        <button type="button" class="filter-btn" data-filter="Beginner" data-action="setDifficultyFilter" data-param="Beginner">Beginner</button>
+        <button type="button" class="filter-btn" data-filter="Intermediate" data-action="setDifficultyFilter" data-param="Intermediate">Intermediate</button>
+        <button type="button" class="filter-btn" data-filter="Advanced" data-action="setDifficultyFilter" data-param="Advanced">Advanced</button>
         <input type="text" class="search-input" id="lessonSearch" placeholder="Search lessons..." oninput="setLessonSearch(this.value)">
       </div>
 
@@ -726,7 +557,7 @@ function continueLearning() {
 
       <div id="lessonDetail" class="lesson-detail-view" style="display:none;">
         <div class="lesson-detail-header">
-          <button type="button" class="btn-secondary" onclick="goBackToLessons()">← Back to Lessons</button>
+          <button type="button" class="btn-secondary" data-action="goBackToLessons">← Back to Lessons</button>
           <div>
             <h3 id="lessonDetailTitle"></h3>
             <span class="badge" id="lessonDetailBadge"></span>
@@ -738,7 +569,7 @@ function continueLearning() {
 
       <div id="lessonContent" class="lesson-content-view" style="display:none;">
         <div class="lesson-detail-header">
-          <button type="button" class="btn-secondary" onclick="goBackToTopics()">← Back</button>
+          <button type="button" class="btn-secondary" data-action="goBackToTopics">← Back</button>
           <div>
             <h3 id="lessonTitle"></h3>
             <span class="badge" id="lessonBadge"></span>
@@ -765,9 +596,9 @@ function continueLearning() {
             <div class="activity-editor-inner">
               <textarea id="activityCode" spellcheck="false"></textarea>
               <div class="activity-actions">
-                <button type="button" class="btn-secondary" onclick="runActivity()">▶ Run</button>
-                <button type="button" class="btn-primary" id="checkActivityBtn" onclick="checkActivity()">Check Answer</button>
-                <button type="button" class="btn-primary" id="completeLessonBtn" style="display:none;" onclick="completeLesson()">✓ Complete Lesson</button>
+                <button type="button" class="btn-secondary" data-action="runActivity">▶ Run</button>
+                <button type="button" class="btn-primary" id="checkActivityBtn" data-action="checkActivity">Check Answer</button>
+                <button type="button" class="btn-primary" id="completeLessonBtn" style="display:none;" data-action="completeLesson">✓ Complete Lesson</button>
               </div>
               <div id="activityResult" class="activity-result"></div>
               <div id="activityHint" class="activity-hint" style="display:none;"></div>
@@ -790,7 +621,7 @@ function continueLearning() {
 
       <div id="quizContent" class="quiz-content-view" style="display:none;">
         <div class="lesson-detail-header">
-          <button type="button" class="btn-secondary" onclick="goBackToQuizzes()">← Back to Quizzes</button>
+          <button type="button" class="btn-secondary" data-action="goBackToQuizzes">← Back to Quizzes</button>
           <div>
             <h3 id="quizTitle"></h3>
             <span class="badge" id="quizBadge"></span>
@@ -801,7 +632,7 @@ function continueLearning() {
         <div id="quizQuestions" class="quiz-questions"></div>
 
         <div class="quiz-actions">
-          <button type="button" class="btn-primary" onclick="submitQuiz()">Submit Quiz</button>
+          <button type="button" class="btn-primary" data-action="submitQuiz">Submit Quiz</button>
         </div>
         <div id="quizResult" class="activity-result"></div>
       </div>
@@ -825,10 +656,10 @@ function continueLearning() {
 
       <!-- Games Tabs -->
       <div class="games-tabs">
-        <button class="editor-tab active" onclick="showGamesMode('sprint')">🏃 Code Sprint</button>
-        <button class="editor-tab" onclick="showGamesMode('linkup')">🔗 Link Up</button>
-        <button class="editor-tab" onclick="showGamesMode('bug')">🐛 Spot the Bug</button>
-        <button class="editor-tab" onclick="showGamesMode('typing')">⌨️ Typing Speed</button>
+        <button class="editor-tab active" data-action="showGamesMode" data-param="sprint">🏃 Code Sprint</button>
+        <button class="editor-tab" data-action="showGamesMode" data-param="linkup">🔗 Link Up</button>
+        <button class="editor-tab" data-action="showGamesMode" data-param="bug">🐛 Spot the Bug</button>
+        <button class="editor-tab" data-action="showGamesMode" data-param="typing">⌨️ Typing Speed</button>
       </div>
 
       <!-- Code Sprint -->
@@ -851,19 +682,284 @@ function continueLearning() {
         <div id="typingArea">
           <div id="typingSetup">
             <p>Type the code snippet as fast and accurately as you can. Press <strong>Start</strong> to begin.</p>
-            <button type="button" class="btn-primary" onclick="startTyping()">▶ Start Typing Test</button>
+            <div class="game-config" style="margin: 16px 0;">
+              <label>Category
+                <select id="typingCategory">
+                  <option value="all">All Categories</option>
+                  <option value="html">HTML</option>
+                  <option value="css">CSS</option>
+                  <option value="js">JavaScript</option>
+                </select>
+              </label>
+              <label>Duration
+                <select id="typingDuration">
+                  <option value="30">30s</option>
+                  <option value="60" selected>60s</option>
+                  <option value="120">120s</option>
+                </select>
+              </label>
+            </div>
+            <button type="button" class="btn-primary" data-action="startTyping">▶ Start Typing Test</button>
           </div>
-            <div id="typingGame" style="display:none;">
-              <div id="typingSnippet" class="typing-snippet"></div>
-              <textarea id="typingInput" class="typing-input" spellcheck="false" placeholder="Type the code here..."></textarea>
-              <div id="typingResult" class="typing-result" style="display:none;">
-                <div id="typingResultText"></div>
-                <button type="button" class="btn-primary" onclick="startTyping()" style="margin-top:12px">Try Again</button>
-              </div>
+          <div id="typingGame" style="display:none;">
+            <div class="typing-hud">
+              <span>⏱ <strong id="typingTime">60</strong>s</span>
+              <span>WPM: <strong id="typingWpm">0</strong></span>
+              <span>Accuracy: <strong id="typingAccuracy">100%</strong></span>
+              <span>Best: <strong id="typingBest">0</strong></span>
+              <span class="game-controls">
+                <button class="game-pause-btn pause-btn" onclick="togglePause('typing')" id="typingPauseBtn">⏸ Pause</button>
+                <button class="game-stop-btn" onclick="stopGame('typing')">⏹ Stop</button>
+              </span>
+            </div>
+            <div class="typing-progress"><div class="typing-progress-fill" id="typingProgressFill"></div></div>
+            <div id="typingSnippet" class="typing-snippet"></div>
+            <textarea id="typingInput" class="typing-input" spellcheck="false" placeholder="Type the code here..."></textarea>
+            <div id="typingResult" class="typing-result" style="display:none;">
+              <div id="typingResultText"></div>
+              <button type="button" class="btn-primary" data-action="startTyping" style="margin-top:12px">Try Again</button>
+            </div>
           </div>
         </div>
       </div>
     </div>
+  </div>
+</div>
+
+<div class="settings-overlay" id="settingsOverlay" data-action="toggleSettings" aria-hidden="true"></div>
+<div class="settings-panel" id="settings" role="dialog" aria-hidden="true">
+  <div class="settings-header">
+    <h4>⚙️ Settings</h4>
+    <button class="settings-close" data-action="toggleSettings" aria-label="Close settings">✕</button>
+  </div>
+  <div class="settings-body">
+    <nav class="settings-nav" id="settingsNav">
+      <button type="button" class="settings-nav-item active" data-action="switchSettingsTab" data-param="account" data-tab="account">👤 Account</button>
+      <button type="button" class="settings-nav-item" data-action="switchSettingsTab" data-param="security" data-tab="security">🔒 Security</button>
+      <button type="button" class="settings-nav-item" data-action="switchSettingsTab" data-param="notifications" data-tab="notifications">🔔 Notifications</button>
+      <button type="button" class="settings-nav-item" data-action="switchSettingsTab" data-param="privacy" data-tab="privacy">💾 Privacy</button>
+      <button type="button" class="settings-nav-item" data-action="switchSettingsTab" data-param="about" data-tab="about">ℹ️ About</button>
+    </nav>
+    <div class="settings-content">
+      <!-- Account -->
+      <div class="settings-panel active" id="settings-account">
+        <h4 class="sp-section-title">Account</h4>
+        <div class="avatar-settings">
+          <div class="avatar-preview-panel">
+            <div class="avatar-preview" id="settingsAvatarPreview">👤</div>
+            <div>
+              <h5>Profile Picture</h5>
+              <p>Choose an avatar or upload your own</p>
+            </div>
+          </div>
+          <div class="avatar-picker" id="avatarPicker">
+            <button type="button" class="avatar-option" data-avatar-choice="wave" data-action="selectAvatarPreset" data-param="wave">wave</button>
+            <button type="button" class="avatar-option" data-avatar-choice="sunset" data-action="selectAvatarPreset" data-param="sunset">sunset</button>
+            <button type="button" class="avatar-option" data-avatar-choice="forest" data-action="selectAvatarPreset" data-param="forest">forest</button>
+          </div>
+          <div class="avatar-upload-row">
+            <label class="avatar-upload-btn btn-secondary" for="avatarUpload">📁 Upload Photo</label>
+            <input type="file" id="avatarUpload" accept="image/png,image/jpeg,image/gif,image/webp" hidden onchange="handleAvatarUpload(event)">
+            <button type="button" class="btn-secondary" onclick="clearCustomAvatar()">🗑️ Reset</button>
+          </div>
+          <p id="profileStatus" class="status-msg" style="margin-top:10px;"></p>
+        </div>
+        <div class="settings-form-grid">
+          <div class="input-group">
+            <label>Full Name</label>
+            <input id="settingsFullName" type="text" placeholder="Enter your full name" autocomplete="name">
+          </div>
+          <div class="input-group">
+            <label>Nickname</label>
+            <input id="settingsNickname" type="text" placeholder="Display name" autocomplete="nickname">
+          </div>
+          <div class="input-group">
+            <label>Username</label>
+            <input id="settingsUsername" type="text" placeholder="Unique username" autocomplete="username">
+          </div>
+          <div class="input-group">
+            <label>Email</label>
+            <input id="settingsEmail" type="email" placeholder="Email address" autocomplete="email">
+          </div>
+          <div class="input-group">
+            <label>Phone Number</label>
+            <input id="settingsPhone" type="tel" placeholder="09xxxxxxxxx" autocomplete="tel" inputmode="numeric" maxlength="11" pattern="09[0-9]{9}">
+          </div>
+        </div>
+        <div class="settings-actions">
+          <button type="button" class="btn-primary settings-full-btn" data-action="saveProfile">💾 Save Changes</button>
+        </div>
+      </div>
+
+      <!-- Security -->
+      <div class="settings-panel" id="settings-security">
+        <h4 class="sp-section-title">Security</h4>
+        <div class="sp-card">
+          <h5>Change Password</h5>
+          <div class="settings-form-grid">
+            <div class="input-group">
+              <label>Current Password</label>
+              <input id="currentPassword" type="password" placeholder="Enter current password" autocomplete="current-password">
+            </div>
+            <div class="input-group">
+              <label>New Password</label>
+              <input id="newPassword" type="password" placeholder="At least 6 characters" autocomplete="new-password">
+            </div>
+            <div class="input-group">
+              <label>Confirm New Password</label>
+              <input id="confirmNewPassword" type="password" placeholder="Repeat new password" autocomplete="new-password">
+            </div>
+          </div>
+          <div class="settings-actions">
+            <button type="button" class="btn-primary settings-full-btn" data-action="changePassword">🔑 Update Password</button>
+          </div>
+        </div>
+
+        <div class="sp-card">
+          <h5>Two-Factor Authentication</h5>
+          <div class="sp-toggle-row">
+            <span>Enable two-factor authentication for extra account security</span>
+            <label class="switch">
+              <input type="checkbox" id="twoFactorToggle" onchange="toggleSetting('twoFactor')">
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="sp-card">
+          <h5>Login Activity</h5>
+          <div class="login-activity-list" id="loginActivityList">
+            <div class="login-activity-item">
+              <div class="la-device">🖥️ Chrome on Windows</div>
+              <div class="la-meta">Just now &middot; Manila, PH</div>
+            </div>
+            <div class="login-activity-item">
+              <div class="la-device">📱 Safari on iOS</div>
+              <div class="la-meta">2 days ago &middot; Manila, PH</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notifications -->
+      <div class="settings-panel" id="settings-notifications">
+        <h4 class="sp-section-title">Notifications</h4>
+        <div class="sp-card">
+          <div class="sp-toggle-row">
+            <div>
+              <h5>Email Notifications</h5>
+              <p>Receive updates and alerts via email</p>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="emailNotificationsToggle" onchange="toggleSetting('emailNotifications')">
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+        <div class="sp-card">
+          <div class="sp-toggle-row">
+            <div>
+              <h5>Push Notifications</h5>
+              <p>Receive browser push notifications</p>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="pushNotificationsToggle" onchange="toggleSetting('pushNotifications')">
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+        <div class="sp-card">
+          <div class="sp-toggle-row">
+            <div>
+              <h5>Assignment Reminders</h5>
+              <p>Get reminded about pending assignments</p>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="assignmentRemindersToggle" onchange="toggleSetting('assignmentReminders')">
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+        <div class="sp-card">
+          <div class="sp-toggle-row">
+            <div>
+              <h5>Course Updates</h5>
+              <p>Be notified when new content is available</p>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="courseUpdatesToggle" onchange="toggleSetting('courseUpdates')">
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Privacy -->
+      <div class="settings-panel" id="settings-privacy">
+        <h4 class="sp-section-title">Privacy</h4>
+        <div class="sp-card">
+          <h5>Profile Visibility</h5>
+          <div class="input-group">
+            <label>Who can see your profile</label>
+            <select id="profileVisibility" class="settings-select" onchange="appState.profileVisibility=this.value;saveState();">
+              <option value="public">🌍 Public</option>
+              <option value="private">🔒 Private</option>
+              <option value="friends">👥 Friends Only</option>
+            </select>
+          </div>
+        </div>
+        <div class="sp-card">
+          <h5>Your Data</h5>
+          <p style="margin-bottom:12px;opacity:0.7;">Download a copy of your profile, progress, and settings.</p>
+          <div class="settings-actions">
+            <button type="button" class="btn-secondary settings-full-btn" data-action="exportAccountData">📥 Download My Data</button>
+          </div>
+        </div>
+        <div class="sp-card sp-card-danger">
+          <h5>Delete Account</h5>
+          <p style="margin-bottom:12px;opacity:0.7;">Permanently remove your account and all associated data. This action cannot be undone.</p>
+          <div class="settings-actions">
+            <button type="button" class="btn-danger settings-full-btn delete-account-btn" data-action="deleteAccount">🗑️ Delete Account</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- About -->
+      <div class="settings-panel" id="settings-about">
+        <h4 class="sp-section-title">About</h4>
+        <div class="sp-card">
+          <div class="about-row"><span>App Version</span><span class="about-value">1.0.0 (Build 2026.06)</span></div>
+        </div>
+        <div class="sp-card">
+          <div class="about-row"><span>Terms &amp; Conditions</span><a href="#" class="about-link">View terms</a></div>
+        </div>
+        <div class="sp-card">
+          <div class="about-row"><span>Privacy Policy</span><a href="#" class="about-link">View policy</a></div>
+        </div>
+        <div class="sp-card">
+          <div class="about-row"><span>Help Center</span><a href="#" class="about-link">Visit help</a></div>
+        </div>
+        <div class="sp-card">
+          <div class="about-row"><span>Contact Support</span><a href="#" class="about-link">Email support</a></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="shortcuts-overlay" id="shortcutsOverlay" data-action="toggleShortcuts" aria-hidden="true"></div>
+<div class="shortcuts-modal" id="shortcutsModal" role="dialog" aria-hidden="true">
+  <div class="shortcuts-header">
+    <h4>⌨️ Keyboard Shortcuts</h4>
+    <button class="shortcuts-close" data-action="toggleShortcuts" aria-label="Close shortcuts">✕</button>
+  </div>
+  <div class="shortcuts-body">
+    <div class="shortcut-row"><kbd>?</kbd> <span>Toggle this menu</span></div>
+    <div class="shortcut-row"><kbd>G</kbd> then <kbd>H</kbd> <span>Go to Home</span></div>
+    <div class="shortcut-row"><kbd>G</kbd> then <kbd>L</kbd> <span>Go to Lessons</span></div>
+    <div class="shortcut-row"><kbd>G</kbd> then <kbd>G</kbd> <span>Go to Games</span></div>
+    <div class="shortcut-row"><kbd>Esc</kbd> <span>Close modal / overlay</span></div>
+    <div class="shortcut-row"><kbd>S</kbd> <span>Open Settings</span></div>
   </div>
 </div>
 
@@ -878,6 +974,10 @@ function continueLearning() {
 <script>
   window.codeMirrorLoaded = true;
   if (window.afterCodeMirrorReady) window.afterCodeMirrorReady();
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  }
 </script>
 </body>
 </html>
+
